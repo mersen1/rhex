@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name        = 'rhex'
-  s.version     = '3.0.1'
+  s.version     = '3.3.1'
   s.summary     = 'Ruby Hexagonal Grids'
   s.description = <<-DESCRIPTION
     A library providing hexagons management and hexagonal grids for ruby.
@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.files       = Dir['lib/**/*.rb']
   s.homepage    = 'https://github.com/mersen1/rhex'
   s.license     = 'MIT'
-  s.required_ruby_version = '>= 3.1.4'
+  s.required_ruby_version = '>= 3.3.0'
 
   s.add_dependency 'rgl'
   s.add_dependency 'rmagick'
