@@ -11,15 +11,15 @@ module Rhex
         @grid = Rhex::Decorators::GridWithMarkup.new(grid)
       end
 
-      # width
-      def cols
-        (bottom_left_corner.distance(bottom_right_corner) * central_hex.width) + central_hex.size
+      def width
+        (q_max - q_min + 1) * central_hex.width
       end
+      alias_method :cols, :width
 
-      # height
-      def rows
-        (top_left_corner.distance(bottom_left_corner) * central_hex.height) + central_hex.size
+      def height
+        (r_max - r_min + 1) * central_hex.height
       end
+      alias_method :rows, :height
 
       def center
         @center ||= Center.new(
@@ -33,16 +33,13 @@ module Rhex
       attr_reader :grid
 
       def_delegators :grid, :hex_size
-      def_delegators :grid, :top_left_corner
-      def_delegators :grid, :bottom_left_corner
-      def_delegators :grid, :bottom_right_corner
+      def_delegators :grid, :q_max
+      def_delegators :grid, :q_min
+      def_delegators :grid, :r_max
+      def_delegators :grid, :r_min
 
       def central_hex
         @central_hex ||= grid.decorate_hex(grid.central_hex)
-      end
-
-      def sign(number)
-        number <=> 0
       end
     end
   end

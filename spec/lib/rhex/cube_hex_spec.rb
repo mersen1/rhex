@@ -131,7 +131,7 @@ RSpec.describe Rhex::CubeHex do
 
       obstacles
         .to_grid
-        .merge(expected_reachable)
+        .merge(expected_reachable + [])
         .to_pic('reachable', orientation: Rhex::GridToPic::POINTY_TOPPED)
 
       expect(source.reachable(3, obstacles: obstacles)).to contain_exactly(*expected_reachable)
@@ -139,6 +139,12 @@ RSpec.describe Rhex::CubeHex do
   end
 
   describe '#linedraw' do
+    module Enumerable
+      def to_grid(klass = Rhex::Grid, *args, **kwargs, &)
+        klass.new(self, *args, **kwargs, &)
+      end
+    end
+
     it 'returns straight path to the target' do
       source = Rhex::AxialHex.new(-4, 0)
       target = Rhex::AxialHex.new(4, -2)

@@ -4,32 +4,47 @@ module Rhex
   module Decorators
     class GridWithMarkup < SimpleDelegator
       def central_hex
-        linedraw = top_left_corner.linedraw(bottom_right_corner)
-        linedraw[linedraw.length / 2.0]
+        Rhex::AxialHex.new(
+          median(q_map),
+          median(r_map)
+        )
       end
 
-      def top_left_corner
-        @top_left_corner ||= Rhex::AxialHex.new(q_map.min, r_map.min)
+      def q_max
+        @q_max ||= q_map.max
       end
 
-      def bottom_right_corner
-        @bottom_right_corner ||= Rhex::AxialHex.new(q_map.max, r_map.max)
+      def q_min
+        @q_min ||= q_map.min
       end
 
-      def bottom_left_corner
-        return bottom_right_corner.reflection_r(central_hex) if pointy_topped?
+      def r_max
+        @r_max ||= r_map.max
+      end
 
-        top_left_corner.reflection_q(central_hex)
+      def r_min
+        @r_min ||= r_map.min
       end
 
       private
 
       def q_map
-        @q_map ||= to_a.map(&:q)
+        @q_map ||= to_a.map(&:q).sort
       end
 
       def r_map
-        @r_map ||= to_a.map(&:r)
+        @r_map ||= to_a.map(&:r).sort
+      end
+
+      def median(array)
+        length = array.length
+        mid = length / 2
+
+        if length.odd?
+          array[mid]
+        else
+          (array[mid - 1] + array[mid]) / 2.0
+        end
       end
     end
   end

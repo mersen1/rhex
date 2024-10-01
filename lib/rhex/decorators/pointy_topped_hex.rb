@@ -19,11 +19,15 @@ module Rhex
       end
 
       def height
-        size * 2.0
+        Math.sqrt(3) * radius
       end
 
       def width
-        size * Math.sqrt(3)
+        (3.0 / 2.0) * radius
+      end
+
+      def radius
+        (2.0 / Math.sqrt(3)) * size
       end
 
       private
