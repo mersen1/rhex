@@ -56,11 +56,11 @@ RSpec.describe(Rhex::CubeHex) do
       it "returns neighbors according to the grid" do
         grid = grid(2)
         center = Rhex::AxialHex.new(0, 2)
-        center.image_config = Rhex::ImageConfigs.source_image_config
+        center.image_config = Rhex::ImageConfigs.image_config_for(:source)
 
         expected_neighbors = coords_to_hexes(
           [[1, 1], [0, 1], [-1, 2]],
-          image_config: Rhex::ImageConfigs.path_image_config
+          image_config: Rhex::ImageConfigs.image_config_for(:path)
         )
 
         grid
@@ -94,16 +94,16 @@ RSpec.describe(Rhex::CubeHex) do
   describe "#field_of_view" do
     it "calculate field of view" do
       grid = grid(3)
-      source = Rhex::AxialHex.new(-1, 2, image_config: Rhex::ImageConfigs.source_image_config)
+      source = Rhex::AxialHex.new(-1, 2, image_config: Rhex::ImageConfigs.image_config_for(:source))
       obstacles = coords_to_hexes(
         [[-1, 1], [-1, 0], [0, -1], [1, -1], [1, 0]],
-        image_config: Rhex::ImageConfigs.obstacle_image_config
+        image_config: Rhex::ImageConfigs.image_config_for(:obstacle)
       )
 
       expect_field_of_view = coords_to_hexes(
         [[0, 0], [0, 1], [1, 1], [0, 2], [-1, 3], [0, 3], [1, 2], [-3, 0], [-3, 1], [-3, 2], [-3, 3],
          [-2, 1], [-2, 2], [-2, 3], [2, 0], [2, 1], [3, 0], [3, -1],],
-        image_config: Rhex::ImageConfigs.path_image_config
+        image_config: Rhex::ImageConfigs.image_config_for(:path)
       )
 
       field_of_view = source.field_of_view(grid, obstacles)
@@ -120,28 +120,19 @@ RSpec.describe(Rhex::CubeHex) do
   describe "#reachable" do
     it "shows reachable hexes" do
       source = Rhex::AxialHex.new(0, 0)
-      source.image_config = Rhex::ImageConfigs.source_image_config
+      source.image_config = Rhex::ImageConfigs.image_config_for(:source)
 
       obstacles = coords_to_hexes([
         [1, -1], [2, -1], [2, 0], [2, 1], [1, 2], [0, 2],
         [-1, 2], [-1, 1], [-2, 1], [-1, -1], [0, -2], [1, -3],
-      ], image_config: Rhex::ImageConfigs.obstacle_image_config)
+      ], image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
 
       expected_reachable = coords_to_hexes([
         [0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [1, -2],
         [2, -3], [2, -2], [-2, -1], [-3, 0], [-2, 0], [-3, 1],
-      ], image_config: Rhex::ImageConfigs.path_image_config)
+      ], image_config: Rhex::ImageConfigs.image_config_for(:path))
 
-      # Build a visually square 8x8 board using even-q offset -> axial mapping
-      base_grid =
-        (-4..3).flat_map do |col|
-          (-4..3).map do |row|
-            axial_r = row - (col / 2)
-            Rhex::AxialHex.new(col, axial_r)
-          end
-        end.to_grid
-
-      base_grid
+      square_grid(4)
         .merge(obstacles)
         .merge(expected_reachable + [])
         .merge([source])
@@ -178,7 +169,7 @@ RSpec.describe(Rhex::CubeHex) do
       target = Rhex::AxialHex.new(4, -2)
 
       path = source.linedraw(target)
-      path.each { _1.image_config = Rhex::ImageConfigs.path_image_config }
+      path.each { _1.image_config = Rhex::ImageConfigs.image_config_for(:path) }
       path.to_grid.to_pic("linedraw")
 
       expect(path)

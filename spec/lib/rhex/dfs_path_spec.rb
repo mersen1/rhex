@@ -30,12 +30,13 @@ RSpec.describe(Rhex::DfsPath) do
         grid = grid(3)
         source = Rhex::AxialHex.new(0, 0)
         target = Rhex::AxialHex.new(2, -1)
-        obstacles = coords_to_hexes([[1, 0], [1, -1]], image_config: Rhex::ImageConfigs.obstacle_image_config)
+        obstacles = coords_to_hexes([[1, 0], [1, -1]], image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
 
         path = described_class.new(grid, obstacles: obstacles).call(source, target)
+        path.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
 
-        source.image_config = Rhex::ImageConfigs.source_image_config
-        target.image_config = Rhex::ImageConfigs.target_image_config
+        source.image_config = Rhex::ImageConfigs.image_config_for(:source)
+        target.image_config = Rhex::ImageConfigs.image_config_for(:target)
 
         grid.merge(obstacles)
           .merge([source, target])
@@ -56,12 +57,13 @@ RSpec.describe(Rhex::DfsPath) do
       expect(described_class.new(grid).call(source, source)).to(eq([source]))
     end
 
-    it "returns an empty path when no route exists" do
+    it "raises when no route exists" do
       source = Rhex::AxialHex.new(0, 0)
       target = Rhex::AxialHex.new(3, 0)
       grid = Rhex::Grid.new([source, target])
 
-      expect(described_class.new(grid).call(source, target)).to(eq([]))
+      expect { described_class.new(grid).call(source, target) }
+        .to(raise_error(described_class::PathNotFoundError))
     end
 
     it "raises when the source is missing from the grid" do

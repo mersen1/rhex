@@ -12,4 +12,17 @@ module GridHelpers
 
     grid
   end
+
+  def square_grid(range)
+    grid = Rhex::Grid.new
+
+    (-range..range - 1).each do |col|
+      (-range..range - 1).each do |row|
+        axial_r = row - (col / 2)
+        grid.add(Rhex::AxialHex.new(col, axial_r))
+      end
+    end
+
+    grid
+  end
 end

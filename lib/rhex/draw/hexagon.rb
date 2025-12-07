@@ -41,9 +41,10 @@ module Rhex
       def_delegators :hex, :coordinates
 
       def image_config
-        ImageConfig.new(
-          **default_image_config.to_h.merge(hex.image_config.to_h.compact)
-        )
+        config = hex.image_config
+        return default_image_config if config.nil?
+
+        ImageConfig.new(**default_image_config.to_h.merge(config.to_h.compact))
       end
 
       def draw_hexagon(config)

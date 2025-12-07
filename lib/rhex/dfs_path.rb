@@ -4,6 +4,7 @@ module Rhex
   class DfsPath
     GridDoesNotContainSourceError = Class.new(StandardError)
     GridDoesNotContainTargetError = Class.new(StandardError)
+    PathNotFoundError = Class.new(StandardError)
 
     def initialize(grid, obstacles: [])
       @grid = grid
@@ -16,14 +17,14 @@ module Rhex
       raise GridDoesNotContainSourceError unless grid.include?(source)
       raise GridDoesNotContainTargetError unless grid.include?(target)
 
-      return decorate_path([source], source, target) if source == target
+      return [source] if source == target
 
       visited = { [source.q, source.r] => true }
       stack = [[source, [source]]]
 
       until stack.empty?
         current, path = stack.pop
-        return decorate_path(path, source, target) if current == target
+        return path if current == target
 
         ordered_neighbors(current, target).each do |neighbor|
           key = [neighbor.q, neighbor.r]
@@ -35,7 +36,7 @@ module Rhex
         end
       end
 
-      []
+      raise PathNotFoundError
     end
 
     private
@@ -64,29 +65,6 @@ module Rhex
           neighbor.q,
         ]
       end
-    end
-
-    def decorate_path(path, source, target)
-      path.map do |hex|
-        case hex
-        when source
-          source
-        when target
-          target
-        else
-          Rhex::AxialHex.new(
-            hex.q,
-            hex.r,
-            image_config: safe_path_image_config
-          )
-        end
-      end
-    end
-
-    def safe_path_image_config
-      return unless defined?(Rhex::ImageConfigs) && Rhex::ImageConfigs.respond_to?(:path_image_config)
-
-      Rhex::ImageConfigs.path_image_config
     end
   end
 end

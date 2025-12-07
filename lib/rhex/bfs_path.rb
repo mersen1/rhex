@@ -4,6 +4,7 @@ module Rhex
   class BfsPath
     GridDoesNotContainSourceError = Class.new(StandardError)
     GridDoesNotContainTargetError = Class.new(StandardError)
+    PathNotFoundError = Class.new(StandardError)
 
     def initialize(grid, obstacles: [])
       @grid = grid
@@ -16,13 +17,10 @@ module Rhex
       raise GridDoesNotContainSourceError unless grid.include?(source)
       raise GridDoesNotContainTargetError unless grid.include?(target)
 
-      bfs_shortest_path(source, target).map do |hex|
-        Rhex::AxialHex.new(
-          hex.q,
-          hex.r,
-          image_config: safe_path_image_config
-        )
-      end
+      path = bfs_shortest_path(source, target)
+      raise PathNotFoundError if path.empty?
+
+      path
     end
 
     private
@@ -89,12 +87,6 @@ module Rhex
       end
 
       path.reverse
-    end
-
-    def safe_path_image_config
-      return unless defined?(Rhex::ImageConfigs) && Rhex::ImageConfigs.respond_to?(:path_image_config)
-
-      Rhex::ImageConfigs.path_image_config
     end
   end
 end

@@ -7,13 +7,27 @@ module Rhex
 
     class << self
       def load!(image_configs_path)
+        configs.clear
+
         path = File.join(image_configs_path, CONFIG_PATTERN)
         Dir.glob(path).each do |file_path|
           load_file!(file_path)
         end
       end
 
+      def image_config_for(name)
+        key = normalize_key(name)
+        config = configs[key]
+        return config if config
+
+        raise ArgumentError, "Unknown image config: #{name}"
+      end
+
       private
+
+      def configs
+        @configs ||= {}
+      end
 
       def load_file!(file_path)
         extname = File.extname(file_path)
@@ -23,9 +37,11 @@ module Rhex
           object_class: OpenStruct # rubocop:disable Style/OpenStructUse
         )
 
-        define_singleton_method(filename) do
-          config
-        end
+        configs[normalize_key(filename)] = config
+      end
+
+      def normalize_key(name)
+        name.to_s.sub(/_image_config\z/, "").to_sym
       end
     end
   end

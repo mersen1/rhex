@@ -40,18 +40,18 @@ RSpec.describe(Rhex::BfsPath) do
           coords_to_hexes([
             [1, -1], [2, -1], [2, 0], [2, 1], [1, 2], [0, 2], [-1, 2], [-1, 1],
             [-2, 1], [-1, -1], [0, -2], [1, -3], [-3, 2], [-4, 3], [-5, 4],
-          ], image_config: Rhex::ImageConfigs.obstacle_image_config)
+          ], image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
 
         shortest_path = described_class.new(grid, obstacles: obstacles).call(source, target)
 
-        source.image_config = Rhex::ImageConfigs.source_image_config
-        target.image_config = Rhex::ImageConfigs.target_image_config
+        source.image_config = Rhex::ImageConfigs.image_config_for(:source)
+        target.image_config = Rhex::ImageConfigs.image_config_for(:target)
 
         expected_shortest_path =
           coords_to_hexes([
             [1, 1], [1, 0], [0, 0], [0, -1], [1, -2], [2, -2], [3, -2], [3, -1], [3, 0],
             [3, 1], [2, 2], [1, 3], [0, 3], [-1, 3], [-2, 3], [-3, 4], [-4, 5], [-5, 5],
-          ], image_config: Rhex::ImageConfigs.path_image_config)
+          ], image_config: Rhex::ImageConfigs.image_config_for(:path))
 
         grid.merge(obstacles)
           .merge(expected_shortest_path)
@@ -74,12 +74,13 @@ RSpec.describe(Rhex::BfsPath) do
       expect(described_class.new(grid).call(source, source)).to(eq([source]))
     end
 
-    it "returns an empty path when no route exists" do
+    it "raises when no route exists" do
       source = Rhex::AxialHex.new(0, 0)
       target = Rhex::AxialHex.new(3, 0)
       grid = Rhex::Grid.new([source, target])
 
-      expect(described_class.new(grid).call(source, target)).to(eq([]))
+      expect { described_class.new(grid).call(source, target) }
+        .to(raise_error(described_class::PathNotFoundError))
     end
 
     it "raises when the source is missing from the grid" do
