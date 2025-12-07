@@ -76,6 +76,18 @@ RSpec.describe(Rhex::Grid) do
 
       expect(grid.to_a).to(contain_exactly(hex_a, hex_b))
     end
+
+    it "keeps right-hand grid values on coordinate collisions" do
+      base_hex = Rhex::AxialHex.new(0, 0, data: :base)
+      overriding_hex = Rhex::AxialHex.new(0, 0, data: :other)
+
+      base = described_class.new([base_hex])
+      other = described_class.new([overriding_hex])
+
+      base.merge(other)
+
+      expect(base.fetch(base_hex).data).to(eq(:other))
+    end
   end
 
   describe "#include?" do
@@ -250,6 +262,16 @@ RSpec.describe(Rhex::Grid) do
 
       expect { hex_grid.field_of_view(source) }.to(raise_error(Rhex::Grid::SourceHexNotInGrid))
     end
+
+    it "returns all other cells when obstacles are empty" do
+      hex_grid = grid(1)
+      source = hex_grid.fetch(Rhex::AxialHex.new(0, 0))
+
+      field_of_view = hex_grid.field_of_view(source)
+
+      expect(field_of_view).to(contain_exactly(*hex_grid.to_a - [source]))
+      expect(field_of_view).not_to(include(source))
+    end
   end
 
   describe "#bfs_path" do
@@ -283,6 +305,20 @@ RSpec.describe(Rhex::Grid) do
       expect(dfs_path_instance).to(receive(:call).with(hex_a, target).and_return(path))
 
       expect(grid.dfs_path(hex_a, target, obstacles: obstacles)).to(eq(path))
+    end
+  end
+
+  describe "#fetch" do
+    it "returns the stored hex" do
+      grid = described_class.new([hex_a])
+
+      expect(grid.fetch(hex_a)).to(eq(hex_a))
+    end
+
+    it "returns nil when hex is missing" do
+      grid = described_class.new([hex_a])
+
+      expect(grid.fetch(Rhex::AxialHex.new(2, 2))).to(be_nil)
     end
   end
 end

@@ -74,6 +74,18 @@ RSpec.describe(Rhex::BfsPath) do
       expect(described_class.new(grid).call(source, source)).to(eq([source]))
     end
 
+    it "returns grid-stored hex instances in the path" do
+      grid = grid(2)
+      source = grid.fetch(Rhex::AxialHex.new(0, 0))
+      target = grid.fetch(Rhex::AxialHex.new(1, 1))
+
+      path = described_class.new(grid).call(source, target)
+
+      expect(path.first).to(be(source))
+      expect(path.last).to(be(target))
+      path.each { |hex| expect(grid.fetch(hex)).to(be(hex)) }
+    end
+
     it "raises when no route exists" do
       source = Rhex::AxialHex.new(0, 0)
       target = Rhex::AxialHex.new(3, 0)
