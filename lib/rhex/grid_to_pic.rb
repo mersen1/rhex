@@ -61,7 +61,9 @@ module Rhex
         begin
           gc = Magick::Draw.new
           font_path = ENV.fetch("RHEX_FONT", DEFAULT_FONT_PATH)
-          gc.font = font_path if File.exist?(font_path) || ENV.key?("RHEX_FONT")
+          if gc.respond_to?(:font=) && (File.exist?(font_path) || ENV.key?("RHEX_FONT"))
+            gc.font = font_path
+          end
           gc.text_align(Magick::CenterAlign)
           gc
         end
