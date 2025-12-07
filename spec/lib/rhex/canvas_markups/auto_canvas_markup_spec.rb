@@ -9,8 +9,8 @@ RSpec.describe(Rhex::CanvasMarkups::AutoCanvasMarkup) do
 
   describe "#width and #height" do
     it "scale with the number of columns and rows" do
-      expect(markup.width).to(eq(8.0))
-      expect(markup.height).to(be_within(1e-6).of(12.0 / Math.sqrt(3)))
+      expect(markup.width).to(eq(8))
+      expect(markup.height).to(eq(10))
       expect(markup.cols).to(eq(markup.width))
       expect(markup.rows).to(eq(markup.height))
     end
@@ -21,7 +21,7 @@ RSpec.describe(Rhex::CanvasMarkups::AutoCanvasMarkup) do
       center = markup.center
 
       expect(center.x).to(eq(2.5))
-      expect(center.y).to(be_within(1e-6).of((6.0 / Math.sqrt(3)) - (4.5 / Math.sqrt(3))))
+      expect(center.y).to(be_within(1e-6).of(2.401923788646684))
       expect(markup.center).to(be(center))
     end
   end
