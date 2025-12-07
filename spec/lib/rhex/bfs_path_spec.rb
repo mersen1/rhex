@@ -7,21 +7,28 @@ RSpec.describe(Rhex::BfsPath) do
   include GridHelpers
 
   describe "#call" do
-    it "finds the shortest path" do
-      grid = grid(2)
-      source = Rhex::AxialHex.new(0, 2)
-      target = Rhex::AxialHex.new(0, -2)
+    it "finds the shortest path on the same grid as DFS for comparison" do
+      grid = grid(3)
+      source = Rhex::AxialHex.new(0, 3)
+      target = Rhex::AxialHex.new(0, -3)
 
       shortest_path = described_class.new(grid).call(source, target)
 
-      expect(shortest_path)
-        .to(contain_exactly(
-          source,
-          Rhex::AxialHex.new(0, 1),
-          Rhex::AxialHex.new(0, 0),
-          Rhex::AxialHex.new(0, -1),
-          target
-        ))
+      expected_shortest_path =
+        coords_to_hexes([[0, 3], [0, 2], [0, 1], [0, 0], [0, -1], [0, -2], [0, -3]])
+
+      expect(shortest_path).to(eq(expected_shortest_path))
+
+      image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
+      Rhex::ImageConfigs.load!(image_configs_path)
+
+      shortest_path.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
+      source.image_config = Rhex::ImageConfigs.image_config_for(:source)
+      target.image_config = Rhex::ImageConfigs.image_config_for(:target)
+
+      grid.merge(shortest_path)
+        .merge([source, target])
+        .to_pic("bfs_path", orientation: :pointy_topped)
     end
 
     context "when obstacles are defined" do
@@ -49,18 +56,16 @@ RSpec.describe(Rhex::BfsPath) do
 
         expected_shortest_path =
           coords_to_hexes([
-            [1, 1], [1, 0], [0, 0], [0, -1], [1, -2], [2, -2], [3, -2], [3, -1], [3, 0],
-            [3, 1], [2, 2], [1, 3], [0, 3], [-1, 3], [-2, 3], [-3, 4], [-4, 5], [-5, 5],
+            [1, 1], [0, 1], [0, 0], [0, -1], [1, -2], [2, -2], [3, -2], [3, -1], [3, 0],
+            [3, 1], [2, 2], [1, 3], [0, 4], [-1, 5], [-2, 5], [-3, 5], [-4, 5], [-5, 5],
           ], image_config: Rhex::ImageConfigs.image_config_for(:path))
 
         grid.merge(obstacles)
           .merge(expected_shortest_path)
           .merge([source, target])
-          .to_pic("bfs_path", orientation: :pointy_topped)
+          .to_pic("bfs_path_obstacles", orientation: :pointy_topped)
 
-        expect(shortest_path.first).to(eq(source))
-        expect(shortest_path.last).to(eq(target))
-        expect(shortest_path.size).to(eq(expected_shortest_path.size))
+        expect(shortest_path).to(eq(expected_shortest_path))
         expect(shortest_path & obstacles).to(be_empty)
         expect(shortest_path).to(all(satisfy { |hex| grid.include?(hex) }))
         expect(shortest_path.each_cons(2).all? { |a, b| a.distance(b) == 1 }).to(be(true))

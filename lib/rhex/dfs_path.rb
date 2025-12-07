@@ -19,24 +19,35 @@ module Rhex
 
       return [source] if source == target
 
-      visited = { [source.q, source.r] => true }
+      best_path = nil
+      visited = { [source.q, source.r] => 1 } # store shortest depth seen so far
       stack = [[source, [source]]]
 
       until stack.empty?
         current, path = stack.pop
-        return path if current == target
+        if current == target
+          best_path = path if best_path.nil? || path.length < best_path.length
+          next
+        end
+
+        # prune branches that are already longer than the best we have
+        next if best_path && path.length >= best_path.length
 
         ordered_neighbors(current, target).each do |neighbor|
           key = [neighbor.q, neighbor.r]
-          next if visited.key?(key) || obstacle?(neighbor)
+          next if obstacle?(neighbor)
 
-          visited[key] = true
+          next_length = path.length + 1
+          # allow revisit only if we found a shorter path to the same node
+          next if visited.key?(key) && visited[key] <= next_length
+
+          visited[key] = next_length
           next_hex = grid_hex_for(neighbor)
           stack.push([next_hex, path + [next_hex]])
         end
       end
 
-      raise PathNotFoundError
+      best_path || (raise PathNotFoundError)
     end
 
     private

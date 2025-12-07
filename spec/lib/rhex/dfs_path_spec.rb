@@ -7,17 +7,32 @@ RSpec.describe(Rhex::DfsPath) do
   include GridHelpers
 
   describe "#call" do
-    it "finds a path depth-first" do
-      grid = grid(2)
-      source = Rhex::AxialHex.new(0, 2)
-      target = Rhex::AxialHex.new(1, -1)
+    it "returns the shortest path even when traversing depth-first" do
+      grid = grid(3)
+      source = Rhex::AxialHex.new(0, 3)
+      target = Rhex::AxialHex.new(0, -3)
 
-      path = described_class.new(grid).call(source, target)
+      dfs_path = described_class.new(grid).call(source, target)
+      bfs_path = Rhex::BfsPath.new(grid).call(source, target)
 
-      expect(path.first).to(eq(source))
-      expect(path.last).to(eq(target))
-      expect(path).not_to(be_empty)
-      expect(path.each_cons(2).all? { |a, b| a.distance(b) == 1 }).to(be(true))
+      expected_bfs_path =
+        coords_to_hexes([[0, 3], [0, 2], [0, 1], [0, 0], [0, -1], [0, -2], [0, -3]])
+
+      expect(bfs_path).to(eq(expected_bfs_path))
+      expect(dfs_path).to(eq(expected_bfs_path))
+      expect(bfs_path.each_cons(2).all? { |a, b| a.distance(b) == 1 }).to(be(true))
+      expect(dfs_path.each_cons(2).all? { |a, b| a.distance(b) == 1 }).to(be(true))
+
+      image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
+      Rhex::ImageConfigs.load!(image_configs_path)
+
+      dfs_path.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
+      bfs_path.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
+
+      source.image_config = Rhex::ImageConfigs.image_config_for(:source)
+      target.image_config = Rhex::ImageConfigs.image_config_for(:target)
+
+      grid.merge(dfs_path).merge([source, target]).to_pic("dfs_path", orientation: :pointy_topped)
     end
 
     context "when obstacles are defined" do
@@ -26,7 +41,7 @@ RSpec.describe(Rhex::DfsPath) do
         Rhex::ImageConfigs.load!(image_configs_path)
       end
 
-      it "avoids obstacles" do
+      it "avoids obstacles with a deterministic path" do
         grid = grid(3)
         source = Rhex::AxialHex.new(0, 0)
         target = Rhex::AxialHex.new(2, -1)
@@ -35,16 +50,20 @@ RSpec.describe(Rhex::DfsPath) do
         path = described_class.new(grid, obstacles: obstacles).call(source, target)
         path.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
 
+        expected_path =
+          coords_to_hexes([
+            [0, 0], [0, -1], [1, -2], [2, -2], [2, -1],
+          ])
+
         source.image_config = Rhex::ImageConfigs.image_config_for(:source)
         target.image_config = Rhex::ImageConfigs.image_config_for(:target)
 
         grid.merge(obstacles)
           .merge([source, target])
           .merge(path)
-          .to_pic("dfs_path", orientation: :pointy_topped)
+          .to_pic("dfs_path_obstacles", orientation: :pointy_topped)
 
-        expect(path.first).to(eq(source))
-        expect(path.last).to(eq(target))
+        expect(path).to(eq(expected_path))
         expect(path & obstacles).to(be_empty)
         expect(path.each_cons(2).all? { |a, b| a.distance(b) == 1 }).to(be(true))
       end
