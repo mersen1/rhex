@@ -1,4 +1,5 @@
 # Rhex
+[![CI](https://github.com/mersen1/rhex/actions/workflows/ci.yml/badge.svg)](https://github.com/mersen1/rhex/actions/workflows/ci.yml)
 
 Ruby toolkit for hexagonal grids based on cube/axial coordinates. It provides geometry utilities (neighbors, distance, reachability, rings, line drawing, path-finding) and rendering helpers that generate PNGs with RMagick. The implementation follows the concepts from https://www.redblobgames.com/grids/hexagons/.
 
@@ -114,3 +115,7 @@ The project uses RSpec with 100% coverage enforced by SimpleCov. Run the suite w
 ```shell
 bundle exec rspec
 ```
+
+## Continuous integration
+- GitHub Actions runs `bundle exec rspec` on every push and pull request to `master`.
+- The badge at the top of this README links to the latest run results.
