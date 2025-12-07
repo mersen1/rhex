@@ -12,7 +12,7 @@ module Rhex
 
       DEFAULT_IMAGE_CONFIG = ImageConfig.new(
         hexagon: ImageProperties.new(
-          color: "#FFFFE5",
+          color: "#F4F4F1",
           stroke_color: "#B3B3B3"
         ),
         text: ImageProperties.new(

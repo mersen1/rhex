@@ -21,15 +21,24 @@ RSpec.describe(Rhex::DfsPath) do
     end
 
     context "when obstacles are defined" do
+      before do
+        image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
+        Rhex::ImageConfigs.load!(image_configs_path)
+      end
+
       it "avoids obstacles" do
         grid = grid(3)
         source = Rhex::AxialHex.new(0, 0)
         target = Rhex::AxialHex.new(2, -1)
-        obstacles = coords_to_hexes([[1, 0], [1, -1]])
+        obstacles = coords_to_hexes([[1, 0], [1, -1]], image_config: Rhex::ImageConfigs.obstacle_image_config)
 
         path = described_class.new(grid, obstacles: obstacles).call(source, target)
 
+        source.image_config = Rhex::ImageConfigs.source_image_config
+        target.image_config = Rhex::ImageConfigs.target_image_config
+
         grid.merge(obstacles)
+          .merge([source, target])
           .merge(path)
           .to_pic("dfs_path", orientation: :pointy_topped)
 

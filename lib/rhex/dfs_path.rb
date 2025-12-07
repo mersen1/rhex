@@ -16,14 +16,14 @@ module Rhex
       raise GridDoesNotContainSourceError unless grid.include?(source)
       raise GridDoesNotContainTargetError unless grid.include?(target)
 
-      return decorate_path([source]) if source == target
+      return decorate_path([source], source, target) if source == target
 
       visited = { [source.q, source.r] => true }
       stack = [[source, [source]]]
 
       until stack.empty?
         current, path = stack.pop
-        return decorate_path(path) if current == target
+        return decorate_path(path, source, target) if current == target
 
         ordered_neighbors(current, target).each do |neighbor|
           key = [neighbor.q, neighbor.r]
@@ -66,13 +66,20 @@ module Rhex
       end
     end
 
-    def decorate_path(path)
+    def decorate_path(path, source, target)
       path.map do |hex|
-        Rhex::AxialHex.new(
-          hex.q,
-          hex.r,
-          image_config: safe_path_image_config
-        )
+        case hex
+        when source
+          source
+        when target
+          target
+        else
+          Rhex::AxialHex.new(
+            hex.q,
+            hex.r,
+            image_config: safe_path_image_config
+          )
+        end
       end
     end
 

@@ -120,6 +120,7 @@ RSpec.describe(Rhex::CubeHex) do
   describe "#reachable" do
     it "shows reachable hexes" do
       source = Rhex::AxialHex.new(0, 0)
+      source.image_config = Rhex::ImageConfigs.source_image_config
       obstacles = coords_to_hexes([
         [1, -1], [2, -1], [2, 0], [2, 1], [1, 2], [0, 2],
         [-1, 2], [-1, 1], [-2, 1], [-1, -1], [0, -2], [1, -3],
@@ -132,6 +133,7 @@ RSpec.describe(Rhex::CubeHex) do
       obstacles
         .to_grid
         .merge(expected_reachable + [])
+        .merge([source])
         .to_pic("reachable", orientation: Rhex::GridToPic::POINTY_TOPPED)
 
       expect(source.reachable(3, obstacles: obstacles)).to(contain_exactly(*expected_reachable))

@@ -44,6 +44,9 @@ RSpec.describe(Rhex::BfsPath) do
 
         shortest_path = described_class.new(grid, obstacles: obstacles).call(source, target)
 
+        source.image_config = Rhex::ImageConfigs.source_image_config
+        target.image_config = Rhex::ImageConfigs.target_image_config
+
         expected_shortest_path =
           coords_to_hexes([
             [1, 1], [1, 0], [0, 0], [0, -1], [1, -2], [2, -2], [3, -2], [3, -1], [3, 0],
@@ -52,6 +55,7 @@ RSpec.describe(Rhex::BfsPath) do
 
         grid.merge(obstacles)
           .merge(expected_shortest_path)
+          .merge([source, target])
           .to_pic("bfs_path", orientation: :pointy_topped)
 
         expect(shortest_path.first).to(eq(source))
