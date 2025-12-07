@@ -7,7 +7,7 @@ This repository contain a library for using a grid of hexagons with ruby.
 
 ## Compatibility
 
-This gem has been tested with ruby 3.0.3
+This gem has been tested with ruby 3.3.7
 
 ## Setup
 

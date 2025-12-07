@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.files       = Dir['lib/**/*.rb']
   s.homepage    = 'https://github.com/mersen1/rhex'
   s.license     = 'MIT'
-  s.required_ruby_version = '>= 3.3.0'
+  s.required_ruby_version = '>= 3.3.7'
 
   s.add_dependency 'rgl'
   s.add_dependency 'rmagick'
