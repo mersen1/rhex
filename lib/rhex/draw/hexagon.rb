@@ -28,7 +28,7 @@ module Rhex
         validation = Rhex::Contracts::ImageConfigContract.new.call(default_image_config)
         validation.failure? && raise(ArgumentError, "Invalid image_config: #{validation.errors.to_h}")
 
-        @default_image_config = default_image_config
+        @default_image_config = validation.to_h
       end
 
       def call
