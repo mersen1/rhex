@@ -42,19 +42,8 @@ grid.to_pic("sample_grid", hex_size: 48, orientation: Rhex::GridToPic::POINTY_TO
 - Equality, `eql?`, and `hash` are coordinate based, so hexes with the same coordinates compare equal and work as hash keys.
 - Reflection helpers: `reflection_q`, `reflection_r`, `reflection_s` reflect across the corresponding axes relative to an optional reference point.
 
-## Spatial operations
-- `grid.neighbors(hex)` – neighbors of a hex that actually exist inside the grid.
-- `distance(other_hex)` – Manhattan distance in cube space.
-- `grid.reachable(source, movements_limit, obstacles: [])` – breadth-first expansion from a hex inside the grid, excluding obstacles; always includes the source hex.
-- `ring(radius)` – all hexes exactly `radius` steps away.
-- `spiral_ring(radius)` – concentric rings from radius 1..radius around the origin hex (raises `RadiusCannotBeZero` when radius is 0).
-- `linedraw(target)` – interpolated straight line of hexes between two points.
-- `grid.field_of_view(source, obstacles = [])` – grid cells visible from a hex without occlusion along the line of sight.
-- `grid.bfs_path(source, target, obstacles: [])` – breadth-first shortest path inside the given grid; raises if the source or target is missing from the grid and skips obstacles. When `Rhex::ImageConfigs.path_image_config` is loaded, returned hexes carry that image config for rendering.
-- `grid.dfs_path(source, target, obstacles: [])` – depth-first path search (first path found, not necessarily the shortest) with the same grid/obstacle handling as `bfs_path`.
-- Utility math: include `Rhex::CubeHex::Math::Hexagon` to compute `movement_range(radius)` (number of reachable cells for a radius).
-
-## Method reference for `Rhex::Grid`
+## Grid methods
+Grid methods operate on collections of hexes and respect grid boundaries and obstacles.
 
 ### neighbors(hex) -> Array<CubeHex>
 Returns neighbors of `hex` that exist inside the grid.
@@ -121,7 +110,8 @@ dst  = Rhex::AxialHex.new(2, -1)
 grid.dfs_path(src, dst, obstacles: [Rhex::AxialHex.new(1, 0)])
 ```
 
-## Method reference for `Rhex::CubeHex` and `Rhex::AxialHex`
+## Hex methods
+Hex methods operate on individual coordinates and small derived collections.
 
 ### distance(other) -> Integer
 Manhattan distance between two hexes in cube coordinates.
