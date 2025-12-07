@@ -68,7 +68,7 @@ module Rhex
     end
 
     def ordered_neighbors(current, target)
-      current.neighbors(grid: grid).sort_by do |neighbor|
+      grid.neighbors(current).sort_by do |neighbor|
         [
           neighbor.distance(target),
           -neighbor.r,

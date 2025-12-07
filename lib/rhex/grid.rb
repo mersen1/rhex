@@ -4,6 +4,8 @@ module Rhex
   class Grid
     include Enumerable
 
+    SourceHexNotInGrid = Class.new(StandardError)
+
     def self.[](*hexes)
       new(hexes)
     end
@@ -70,6 +72,66 @@ module Rhex
       klass.new(self, *args, **kwargs, &)
     end
 
+    def neighbor(hex, direction_index)
+      direction_vector = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
+
+      candidate = hex.add(Rhex::CubeHex.new(*direction_vector, data: hex.data, image_config: hex.image_config))
+      fetch(candidate)
+    end
+
+    def neighbors(hex)
+      Rhex::Constants::DIRECTION_VECTORS.length.times.each_with_object([]) do |direction_index, neighbors|
+        hex_neighbor = neighbor(hex, direction_index)
+        neighbors.push(hex_neighbor) if hex_neighbor
+      end
+    end
+
+    def reachable(source, movements_limit = 1, obstacles: [])
+      start = fetch(source) || raise(SourceHexNotInGrid)
+      obstacle_lookup = lookup_by_coordinates(obstacles)
+
+      fringes = [[start]]
+      visited = [start]
+      visited_lookup = { coordinates_key(start) => true }
+
+      1.upto(movements_limit) do |move|
+        fringes << []
+        fringes[move - 1].each do |hex|
+          neighbors(hex).each do |hex_neighbor|
+            key = coordinates_key(hex_neighbor)
+            next if visited_lookup.key?(key) || obstacle_lookup.key?(key)
+
+            visited_lookup[key] = true
+            visited << hex_neighbor
+            fringes[move] << hex_neighbor
+          end
+        end
+      end
+
+      visited
+    end
+
+    def field_of_view(source, obstacles = [])
+      start = fetch(source) || raise(SourceHexNotInGrid)
+      cells = to_a - [start]
+      return cells if obstacles.empty?
+
+      obstacle_lookup = lookup_by_coordinates(obstacles)
+
+      cells.filter_map do |hex|
+        is_blocked = start.linedraw(hex).any? { |point| obstacle_lookup.key?(coordinates_key(point)) }
+        hex unless is_blocked
+      end
+    end
+
+    def bfs_path(source, target, obstacles: [])
+      Rhex::BfsPath.new(self, obstacles: obstacles).call(source, target)
+    end
+
+    def dfs_path(source, target, obstacles: [])
+      Rhex::DfsPath.new(self, obstacles: obstacles).call(source, target)
+    end
+
     def fetch(hex)
       @hash[key(hex)]
     end
@@ -77,8 +139,16 @@ module Rhex
 
     private
 
-    def key(hex)
+    def lookup_by_coordinates(hexes)
+      hexes.each_with_object({}) { |hex, acc| acc[coordinates_key(hex)] = true }
+    end
+
+    def coordinates_key(hex)
       [hex.q, hex.r]
+    end
+
+    def key(hex)
+      coordinates_key(hex)
     end
   end
 end

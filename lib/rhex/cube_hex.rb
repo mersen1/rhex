@@ -16,17 +16,6 @@ module Rhex
     end
 
     RadiusCannotBeZero = Class.new(StandardError)
-    NotInTheDirectionVectorsList = Class.new(StandardError)
-
-    DIRECTION_VECTORS = [
-      [1, 0, -1],
-      [1, -1, 0],
-      [0, -1, 1],
-      [-1, 0, 1],
-      INITIAL_RING_VECTOR = [-1, 1, 0].freeze,
-      [0, 1, -1],
-    ].freeze
-    private_constant :DIRECTION_VECTORS, :INITIAL_RING_VECTOR
 
     def initialize(q, r, s, data: nil, image_config: nil)
       @q = q
@@ -73,56 +62,6 @@ module Rhex
       end
     end
 
-    def reachable(movements_limit = 1, obstacles: [])
-      fringes = [[self]] # array of arrays of all hexes that can be reached in "movement_limit" steps
-
-      1.upto(movements_limit).each_with_object([self]) do |move, reachable|
-        fringes.push([])
-        fringes[move - 1].each do |hex|
-          hex.neighbors.each do |neighbor|
-            next if reachable.include?(neighbor) || obstacles.include?(neighbor)
-
-            reachable.push(neighbor)
-            fringes[move].push(neighbor)
-          end
-        end
-      end
-    end
-
-    def neighbors(grid: nil)
-      DIRECTION_VECTORS.length.times.each_with_object([]) do |direction_index, neighbors|
-        hex = neighbor(direction_index, grid: grid)
-
-        neighbors.push(hex) unless hex.nil?
-      end
-    end
-
-    def neighbor(direction_index, grid: nil)
-      direction_vector = DIRECTION_VECTORS[direction_index] || raise(NotInTheDirectionVectorsList)
-
-      hex = add(Rhex::CubeHex.new(*direction_vector, data: data, image_config: image_config))
-      return if !grid.nil? && !grid.include?(hex)
-
-      return grid.fetch(hex) if grid
-
-      hex
-    end
-
-    def field_of_view(grid, obstacles = [])
-      grid_except_self = grid.to_a - [self]
-      return grid_except_self if obstacles.empty?
-
-      grid_except_self.filter_map { |hex| hex if linedraw(hex).intersection(obstacles).empty? }
-    end
-
-    def bfs_path(target, grid, obstacles: [])
-      Rhex::BfsPath.new(grid, obstacles: obstacles).call(self, target)
-    end
-
-    def dfs_path(target, grid, obstacles: [])
-      Rhex::DfsPath.new(grid, obstacles: obstacles).call(self, target)
-    end
-
     def distance(hex)
       subtracted_hex = subtract(hex)
       [subtracted_hex.q.abs, subtracted_hex.r.abs, subtracted_hex.s.abs].max
@@ -142,9 +81,9 @@ module Rhex
     end
 
     def ring(radius = 1)
-      hex = add(Rhex::CubeHex.new(*INITIAL_RING_VECTOR).scale(radius))
+      hex = add(Rhex::CubeHex.new(*Rhex::Constants::INITIAL_RING_VECTOR).scale(radius))
 
-      DIRECTION_VECTORS.length.times.with_object([]) do |direction_index, hexes|
+      Rhex::Constants::DIRECTION_VECTORS.length.times.with_object([]) do |direction_index, hexes|
         radius.times do
           hexes.push(hex)
           hex = hex.neighbor(direction_index)
@@ -158,6 +97,12 @@ module Rhex
       1.upto(radius).each_with_object([self]) do |r, hexes|
         hexes.concat(ring(r))
       end
+    end
+
+    def neighbor(direction_index)
+      direction_vector = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
+
+      add(Rhex::CubeHex.new(*direction_vector, data: data, image_config: image_config))
     end
 
     def to_axial

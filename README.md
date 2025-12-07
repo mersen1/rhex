@@ -29,7 +29,7 @@ require "rhex"
 origin = Rhex::AxialHex.new(0, 0)
 grid   = origin.spiral_ring(2).to_grid # includes origin and rings up to radius 2
 
-neighbors = origin.neighbors           # 6 surrounding hexes
+neighbors = grid.neighbors(origin)     # 6 surrounding hexes inside the grid
 distance  = origin.distance(Rhex::AxialHex.new(0, -2)) # => 2
 
 # Render to images/sample_grid.png (centered automatically)
@@ -43,38 +43,85 @@ grid.to_pic("sample_grid", hex_size: 48, orientation: Rhex::GridToPic::POINTY_TO
 - Reflection helpers: `reflection_q`, `reflection_r`, `reflection_s` reflect across the corresponding axes relative to an optional reference point.
 
 ## Spatial operations
-- `neighbors(grid: nil)` – returns up to 6 neighbors. When a grid is provided, only neighbors that exist in the grid are returned; invalid direction indexes raise `NotInTheDirectionVectorsList`.
+- `grid.neighbors(hex)` – neighbors of a hex that actually exist inside the grid.
 - `distance(other_hex)` – Manhattan distance in cube space.
-- `reachable(movements_limit, obstacles: [])` – breadth-first expansion from the current hex, excluding obstacles; always includes the source hex.
+- `grid.reachable(source, movements_limit, obstacles: [])` – breadth-first expansion from a hex inside the grid, excluding obstacles; always includes the source hex.
 - `ring(radius)` – all hexes exactly `radius` steps away.
 - `spiral_ring(radius)` – concentric rings from radius 1..radius around the origin hex (raises `RadiusCannotBeZero` when radius is 0).
 - `linedraw(target)` – interpolated straight line of hexes between two points.
-- `field_of_view(grid, obstacles = [])` – hexes visible from the current hex that are not occluded along the line of sight.
-- `bfs_path(target, grid, obstacles: [])` – breadth-first shortest path inside the given grid; raises if the source or target is missing from the grid and skips obstacles. When `Rhex::ImageConfigs.path_image_config` is loaded, returned hexes carry that image config for rendering.
-- `dfs_path(target, grid, obstacles: [])` – depth-first path search (first path found, not necessarily the shortest) with the same grid/obstacle handling as `bfs_path`.
+- `grid.field_of_view(source, obstacles = [])` – grid cells visible from a hex without occlusion along the line of sight.
+- `grid.bfs_path(source, target, obstacles: [])` – breadth-first shortest path inside the given grid; raises if the source or target is missing from the grid and skips obstacles. When `Rhex::ImageConfigs.path_image_config` is loaded, returned hexes carry that image config for rendering.
+- `grid.dfs_path(source, target, obstacles: [])` – depth-first path search (first path found, not necessarily the shortest) with the same grid/obstacle handling as `bfs_path`.
 - Utility math: include `Rhex::CubeHex::Math::Hexagon` to compute `movement_range(radius)` (number of reachable cells for a radius).
 
-## Method reference for `Rhex::CubeHex` and `Rhex::AxialHex`
+## Method reference for `Rhex::Grid`
 
-### neighbors(grid: nil) -> Array<CubeHex>
-Returns all six neighbors. When a `grid` is provided, only neighbors that exist inside that grid are returned.
+### neighbors(hex) -> Array<CubeHex>
+Returns neighbors of `hex` that exist inside the grid.
 
 ![Neighbors](images/neighbors.png)
 ```ruby
-hex = Rhex::AxialHex.new(0, 0)
-hex.neighbors             # => 6 surrounding hexes
-hex.neighbors(grid: [hex].to_grid) # => [] because only origin is in the grid
+origin = Rhex::AxialHex.new(0, 0)
+grid   = origin.spiral_ring(1).to_grid
+grid.neighbors(origin) # => 6 surrounding hexes already in the grid
 ```
 
-### neighbor(direction_index, grid: nil) -> CubeHex?
-Returns a single neighbor by index `0..5`. Raises `NotInTheDirectionVectorsList` for an invalid index. When `grid` is passed and the neighbor is outside it, returns `nil`.
+### neighbor(hex, direction_index) -> CubeHex?
+Returns a single neighbor by index `0..5`. Raises `DirectionIndexOutOfRange` for an invalid index; returns `nil` when the neighbor is outside the grid.
 
 ![Neighbors inside grid](images/neighbors_inside_grid.png)
 ```ruby
-grid = Rhex::AxialHex.new(0, 0).spiral_ring(1).to_grid
-grid.origin.neighbor(0)           # => neighbor hex
-grid.origin.neighbor(0, grid: [grid.origin].to_grid) # => nil
+origin = Rhex::AxialHex.new(0, 0)
+grid   = origin.spiral_ring(1).to_grid
+grid.neighbor(origin, 0)                # => neighbor hex
+Rhex::Grid[origin].neighbor(origin, 0)  # => nil (missing from grid)
 ```
+
+### reachable(source, movements_limit = 1, obstacles: []) -> Array<CubeHex>
+All cells inside the grid that are reachable within the given number of steps, always including the source. Any hexes listed in `obstacles` are excluded.
+
+![Reachable](images/reachable.png)
+```ruby
+grid     = Rhex::AxialHex.new(0, 0).spiral_ring(2).to_grid
+start    = grid[ Rhex::AxialHex.new(0, 0) ]
+obstacle = Rhex::AxialHex.new(1, 0)
+grid.reachable(start, 2, obstacles: [obstacle])
+```
+
+### field_of_view(source, obstacles = []) -> Array<CubeHex>
+All grid cells visible from `source` without intersecting obstacles. With empty `obstacles`, returns every cell except the source.
+
+![Field of view](images/field_of_view.png)
+```ruby
+grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
+source = grid[Rhex::AxialHex.new(0, 0)]
+obstacles = [Rhex::AxialHex.new(1, 0)]
+grid.field_of_view(source, obstacles)
+```
+
+### bfs_path(source, target, obstacles: []) -> Array<AxialHex>
+Shortest path inside the grid using breadth-first traversal. Raises if the source or target is missing from the grid. Returns an empty array when unreachable. When `ImageConfigs.path_image_config` is loaded, path cells carry that image config.
+
+![BFS shortest path](images/bfs_path.png)
+```ruby
+grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
+src  = grid[Rhex::AxialHex.new(0, 0)]
+dst  = Rhex::AxialHex.new(2, -1)
+grid.bfs_path(src, dst, obstacles: [Rhex::AxialHex.new(1, 0)])
+```
+
+### dfs_path(source, target, obstacles: []) -> Array<AxialHex>
+Depth-first traversal that returns the first path it discovers to the target (not guaranteed to be the shortest). Obstacle handling and validation mirror `bfs_path`; unreachable paths return an empty array.
+
+![DFS path](images/dfs_path.png)
+```ruby
+grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
+src  = grid[Rhex::AxialHex.new(0, 0)]
+dst  = Rhex::AxialHex.new(2, -1)
+grid.dfs_path(src, dst, obstacles: [Rhex::AxialHex.new(1, 0)])
+```
+
+## Method reference for `Rhex::CubeHex` and `Rhex::AxialHex`
 
 ### distance(other) -> Integer
 Manhattan distance between two hexes in cube coordinates.
@@ -84,16 +131,6 @@ Manhattan distance between two hexes in cube coordinates.
 a = Rhex::AxialHex.new(0, 0)
 b = Rhex::AxialHex.new(2, -1)
 a.distance(b) # => 2
-```
-
-### reachable(movements_limit = 1, obstacles: []) -> Array<CubeHex>
-All cells reachable within the given number of steps, always including the source. Any hexes listed in `obstacles` are excluded from the result.
-
-![Reachable](images/reachable.png)
-```ruby
-start = Rhex::AxialHex.new(0, 0)
-obstacle = Rhex::AxialHex.new(1, 0)
-start.reachable(2, obstacles: [obstacle])
 ```
 
 ### ring(radius = 1) -> Array<CubeHex>
@@ -122,39 +159,6 @@ Straight line of hexes between two points, rounded to the nearest centers; inclu
 start = Rhex::AxialHex.new(0, 0)
 finish = Rhex::AxialHex.new(3, -2)
 start.linedraw(finish)
-```
-
-### field_of_view(grid, obstacles = []) -> Array<CubeHex>
-All grid cells visible from the current hex without intersecting obstacles. With empty `obstacles`, returns every cell except the current one.
-
-![Field of view](images/field_of_view.png)
-```ruby
-grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
-source = Rhex::AxialHex.new(0, 0)
-obstacles = [Rhex::AxialHex.new(1, 0)]
-source.field_of_view(grid, obstacles)
-```
-
-### bfs_path(target, grid, obstacles: []) -> Array<AxialHex>
-Shortest path inside the grid using breadth-first traversal. Raises if the source or target is missing from the grid. Returns an empty array when unreachable. When `ImageConfigs.path_image_config` is loaded, path cells carry that image config.
-
-![BFS shortest path](images/bfs_path.png)
-```ruby
-grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
-src  = Rhex::AxialHex.new(0, 0)
-dst  = Rhex::AxialHex.new(2, -1)
-src.bfs_path(dst, grid, obstacles: [Rhex::AxialHex.new(1, 0)])
-```
-
-### dfs_path(target, grid, obstacles: []) -> Array<AxialHex>
-Depth-first traversal that returns the first path it discovers to the target (not guaranteed to be the shortest). Obstacle handling and validation mirror `bfs_path`; unreachable paths return an empty array.
-
-![DFS path](images/dfs_path.png)
-```ruby
-grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
-src  = Rhex::AxialHex.new(0, 0)
-dst  = Rhex::AxialHex.new(2, -1)
-src.dfs_path(dst, grid, obstacles: [Rhex::AxialHex.new(1, 0)])
 ```
 
 ### reflection_q/r/s(reference_point = CubeHex.new(0,0,0)) -> CubeHex
@@ -217,11 +221,11 @@ movement_range(2) # => 19
 Example (path-finding with obstacles):
 ```ruby
 grid      = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
-source    = Rhex::AxialHex.new(0, 0)
+source    = grid[Rhex::AxialHex.new(0, 0)]
 target    = Rhex::AxialHex.new(2, -1)
 obstacles = [Rhex::AxialHex.new(1, 0)]
 
-path = source.bfs_path(target, grid, obstacles: obstacles)
+path = grid.bfs_path(source, target, obstacles: obstacles)
 ```
 
 ## Working with grids

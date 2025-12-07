@@ -40,5 +40,10 @@ RSpec.describe(Rhex::GridToPic) do
 
       described_class.new(hex_grid, hex_size: 2).call("example")
     end
+
+    it "raises on invalid filename" do
+      expect { described_class.new(hex_grid, hex_size: 2).call("../etc/passwd") }
+        .to(raise_error(ArgumentError, "Invalid filename"))
+    end
   end
 end

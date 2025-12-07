@@ -12,6 +12,8 @@ require "rmagick"
 Zeitwerk::Loader.for_gem.setup
 
 module Rhex
+  DirectionIndexOutOfRange = Class.new(StandardError)
+
   class << self
     def root
       Pathname.new(File.expand_path("..", __dir__))
