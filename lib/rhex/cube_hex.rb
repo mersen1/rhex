@@ -103,6 +103,8 @@ module Rhex
       hex = add(Rhex::CubeHex.new(*direction_vector, data: data, image_config: image_config))
       return if !grid.nil? && !grid.include?(hex)
 
+      return grid.fetch(hex) if grid
+
       hex
     end
 
@@ -113,7 +115,7 @@ module Rhex
       grid_except_self.filter_map { |hex| hex if linedraw(hex).intersection(obstacles).empty? }
     end
 
-    def bfs_shortest_path(target, grid, obstacles: [])
+    def bfs_path(target, grid, obstacles: [])
       Rhex::BfsPath.new(grid, obstacles: obstacles).call(self, target)
     end
 

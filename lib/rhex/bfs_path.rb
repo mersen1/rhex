@@ -17,7 +17,7 @@ module Rhex
       raise GridDoesNotContainSourceError unless grid.include?(source)
       raise GridDoesNotContainTargetError unless grid.include?(target)
 
-      path = bfs_shortest_path(source, target)
+      path = bfs_path(source, target)
       raise PathNotFoundError if path.empty?
 
       path
@@ -41,7 +41,7 @@ module Rhex
       obstacles_lookup.key?([hex.q, hex.r])
     end
 
-    def bfs_shortest_path(source, target)
+    def bfs_path(source, target)
       return [source] if source == target
 
       queue = [source]

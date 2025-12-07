@@ -43,7 +43,8 @@ module Rhex
 
     def draw_and_save(filename)
       gc.draw(imgl)
-      imgl.write(Rhex.root.join("images", "#{filename}.png").to_s)
+      safe_filename = sanitize_filename(filename)
+      imgl.write(Rhex.root.join("images", "#{safe_filename}.png").to_s)
     end
 
     def imgl
@@ -63,6 +64,17 @@ module Rhex
           gc.text_align(Magick::CenterAlign)
           gc
         end
+    end
+
+    def sanitize_filename(filename)
+      original = filename.to_s
+      basename = File.basename(original, ".*")
+
+      if basename.empty? || original != File.basename(original) || !basename.match?(/\A[\w-]+\z/)
+        raise ArgumentError, "Invalid filename"
+      end
+
+      basename
     end
   end
 end

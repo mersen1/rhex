@@ -70,6 +70,11 @@ module Rhex
       klass.new(self, *args, **kwargs, &)
     end
 
+    def fetch(hex)
+      @hash[key(hex)]
+    end
+    alias_method :[], :fetch
+
     private
 
     def key(hex)

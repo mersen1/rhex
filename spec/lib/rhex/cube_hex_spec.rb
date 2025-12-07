@@ -190,7 +190,7 @@ RSpec.describe(Rhex::CubeHex) do
     end
   end
 
-  describe "#bfs_shortest_path" do
+  describe "#bfs_path" do
     it "uses BfsPath" do
       source = Rhex::AxialHex.new(0, 0)
       target = instance_double(Rhex::AxialHex)
@@ -204,7 +204,7 @@ RSpec.describe(Rhex::CubeHex) do
         .to(receive(:new).with(grid, obstacles: obstacles).and_return(bfs_path_instance))
       expect(bfs_path_instance).to(receive(:call).with(source, target).and_return(shortest_path))
 
-      expect(source.bfs_shortest_path(target, grid, obstacles: obstacles)).to(eq(shortest_path))
+      expect(source.bfs_path(target, grid, obstacles: obstacles)).to(eq(shortest_path))
     end
   end
 
