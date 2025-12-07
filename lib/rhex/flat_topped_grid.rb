@@ -4,7 +4,7 @@ module Rhex
   class FlatToppedGrid < Rhex::Grid
     include Rhex::Concerns::OrientedGrid
 
-    FLAT_TOPPED_HEX_CLASS_NAME = 'Rhex::Decorators::FlatToppedHex'
+    FLAT_TOPPED_HEX_CLASS_NAME = "Rhex::Decorators::FlatToppedHex"
     private_constant :FLAT_TOPPED_HEX_CLASS_NAME
 
     def pointy_topped?

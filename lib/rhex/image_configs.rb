@@ -2,7 +2,7 @@
 
 module Rhex
   class ImageConfigs
-    CONFIG_PATTERN = '*_config.yml'
+    CONFIG_PATTERN = "*_config.yml"
     private_constant :CONFIG_PATTERN
 
     class << self

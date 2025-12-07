@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'rgl/adjacency'
-require 'rgl/dijkstra'
+require "rgl/adjacency"
+require "rgl/dijkstra"
 
 module Rhex
   class DijkstraShortestPath
@@ -77,7 +77,7 @@ module Rhex
         [
           neighbor.distance(target),
           -neighbor.r,
-          neighbor.q
+          neighbor.q,
         ]
       end
     end

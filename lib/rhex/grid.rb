@@ -20,7 +20,7 @@ module Rhex
       @hash[key(hex)] = hex
       self
     end
-    alias << add
+    alias_method :<<, :add
 
     def each(&)
       return enum_for(:each) { size } unless block_given?
@@ -50,7 +50,7 @@ module Rhex
     def size
       @hash.size
     end
-    alias length size
+    alias_method :length, :size
 
     def to_a
       @hash.values

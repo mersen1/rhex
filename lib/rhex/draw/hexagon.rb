@@ -12,18 +12,18 @@ module Rhex
 
       DEFAULT_IMAGE_CONFIG = ImageConfig.new(
         hexagon: ImageProperties.new(
-          color: '#FFFFE5',
-          stroke_color: '#B3B3B3'
+          color: "#FFFFE5",
+          stroke_color: "#B3B3B3"
         ),
         text: ImageProperties.new(
-          color: '#000000',
-          stroke_color: 'none',
+          color: "#000000",
+          stroke_color: "none",
           font_size: 32
         )
       ).freeze
       private_constant :DEFAULT_IMAGE_CONFIG
 
-      def initialize(gc:, hex:) # rubocop:disable Naming/MethodParameterName
+      def initialize(gc:, hex:)
         @gc = gc
         @hex = hex
       end
@@ -50,7 +50,7 @@ module Rhex
         gc.polygon(*polygon_coordinates)
       end
 
-      def draw_text(config) # rubocop:disable Metrics/AbcSize
+      def draw_text(config)
         gc.fill(config.color)
         gc.stroke(config.stroke_color)
         gc.font_size(config.font_size)
@@ -68,7 +68,7 @@ module Rhex
           angles_in_radians.flat_map do |angle_rad|
             [
               coordinates.x + (hex.size * Math.cos(angle_rad)),
-              coordinates.y + (hex.size * Math.sin(angle_rad))
+              coordinates.y + (hex.size * Math.sin(angle_rad)),
             ]
           end
         end

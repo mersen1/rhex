@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Rhex
-  class CubeHex # rubocop:disable Metrics/ClassLength
+  class CubeHex
     module Math
       module Hexagon
         def movement_range(radius = 1)
@@ -24,11 +24,11 @@ module Rhex
       [0, -1, 1],
       [-1, 0, 1],
       INITIAL_RING_VECTOR = [-1, 1, 0].freeze,
-      [0, 1, -1]
+      [0, 1, -1],
     ].freeze
     private_constant :DIRECTION_VECTORS, :INITIAL_RING_VECTOR
 
-    def initialize(q, r, s, data: nil, image_config: nil) # rubocop:disable Naming/MethodParameterName
+    def initialize(q, r, s, data: nil, image_config: nil)
       @q = q
       @r = r
       @s = s
@@ -73,7 +73,7 @@ module Rhex
       end
     end
 
-    def reachable(movements_limit = 1, obstacles: []) # rubocop:disable Metrics/MethodLength
+    def reachable(movements_limit = 1, obstacles: [])
       fringes = [[self]] # array of arrays of all hexes that can be reached in "movement_limit" steps
 
       1.upto(movements_limit).each_with_object([self]) do |move, reachable|
@@ -172,7 +172,7 @@ module Rhex
       Rhex::CubeHex.new(q * factor, r * factor, s * factor)
     end
 
-    def round # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+    def round
       rounded_q = q.round
       rounded_r = r.round
       rounded_s = s.round

@@ -6,12 +6,12 @@ module Rhex
 
     ORIENTATIONS = [
       FLAT_TOPPED = :flat_topped,
-      POINTY_TOPPED = :pointy_topped
+      POINTY_TOPPED = :pointy_topped,
     ].freeze
 
     ORIENTED_GRIDS_MAPPER = {
-      FLAT_TOPPED => 'Rhex::FlatToppedGrid',
-      POINTY_TOPPED => 'Rhex::PointyToppedGrid'
+      FLAT_TOPPED => "Rhex::FlatToppedGrid",
+      POINTY_TOPPED => "Rhex::PointyToppedGrid",
     }.freeze
 
     DEFAULT_ORIENTATION = FLAT_TOPPED
@@ -43,14 +43,14 @@ module Rhex
 
     def draw_and_save(filename)
       gc.draw(imgl)
-      imgl.write(Rhex.root.join('images', "#{filename}.png"))
+      imgl.write(Rhex.root.join("images", "#{filename}.png"))
     end
 
     def imgl
       @imgl ||=
         begin
           imgl = Magick::ImageList.new
-          imgl.new_image(cols, rows, Magick::HatchFill.new('transparent', 'lightcyan2'))
+          imgl.new_image(cols, rows, Magick::HatchFill.new("transparent", "lightcyan2"))
           imgl
         end
     end
