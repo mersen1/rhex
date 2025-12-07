@@ -51,14 +51,20 @@ module Rhex
       end
 
       def draw_text(config)
-        gc.fill(config.color)
-        gc.stroke(config.stroke_color)
-        gc.font_size(config.font_size)
+        text_config = config || DEFAULT_IMAGE_CONFIG.text
+
+        font_size = text_config.font_size || DEFAULT_IMAGE_CONFIG.text.font_size
+
+        gc.fill(text_config.color || DEFAULT_IMAGE_CONFIG.text.color)
+        gc.stroke(text_config.stroke_color || DEFAULT_IMAGE_CONFIG.text.stroke_color)
+        gc.font_size(font_size)
 
         gc.text(
-          coordinates.x, coordinates.y + (config.font_size / Math::PI),
+          coordinates.x, coordinates.y + (font_size / Math::PI),
           "#{hex.q}, #{hex.r}"
         )
+      rescue Magick::ImageMagickError, ArgumentError
+        # Skip text rendering when ImageMagick cannot render text (e.g., no fonts)
       end
 
       def polygon_coordinates
