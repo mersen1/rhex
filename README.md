@@ -1,167 +1,116 @@
 # Rhex
-This repository contain a library for using a grid of hexagons with ruby.
 
-* It is a partial ruby implementation of the huge work of Amit Patel (http://www.redblobgames.com/grids/hexagons/).
-* The coordinate system is cube/axial.
-* All methods are implemented in cube. Axial is a wrapper around the cube.
+Ruby toolkit for hexagonal grids based on cube/axial coordinates. It provides geometry utilities (neighbors, distance, reachability, rings, line drawing, path-finding) and rendering helpers that generate PNGs with RMagick. The implementation follows the concepts from https://www.redblobgames.com/grids/hexagons/.
 
-## Compatibility
+## Requirements
+- Ruby 3.3.7 or newer (tested against 3.3.7)
+- ImageMagick installed on your system (needed for `rmagick`)
+- Bundler for development/test tasks
 
-This gem has been tested with ruby 3.3.7
-
-## Setup
-
+## Installation
+Use the Git source with Bundler:
+```ruby
+# Gemfile
+gem "rhex", git: "https://github.com/mersen1/rhex.git"
+```
+Then install and require:
 ```shell
-gem install rhex -s https://github.com/mersen1/rhex
+bundle install
 ```
-
-Or in your gemfile : 
 ```ruby
-gem 'rhex', git: 'git@github.com:mersen1/rhex.git'
+require "rhex"
 ```
 
-Then in your code :
+## Quick start
 ```ruby
-require 'rhex'
+require "rhex"
+
+origin = Rhex::AxialHex.new(0, 0)
+grid   = origin.spiral_ring(2).to_grid # includes origin and rings up to radius 2
+
+neighbors = origin.neighbors           # 6 surrounding hexes
+distance  = origin.distance(Rhex::AxialHex.new(0, -2)) # => 2
+
+# Render to images/sample_grid.png (centered automatically)
+grid.to_pic("sample_grid", hex_size: 48, orientation: Rhex::GridToPic::POINTY_TOPPED)
 ```
 
-## Usage
+## Core types
+- `Rhex::CubeHex` – stores `q`, `r`, `s` coordinates plus optional `data` payload and optional `image_config` used for rendering.
+- `Rhex::AxialHex` – lightweight wrapper around `CubeHex` that omits `s`; convert with `to_cube` / `to_axial`.
+- Equality, `eql?`, and `hash` are coordinate based, so hexes with the same coordinates compare equal and work as hash keys.
+- Reflection helpers: `reflection_q`, `reflection_r`, `reflection_s` reflect across the corresponding axes relative to an optional reference point.
 
-### Hex Basics
+## Spatial operations
+- `neighbors(grid: nil)` – returns up to 6 neighbors. When a grid is provided, only neighbors that exist in the grid are returned; invalid direction indexes raise `NotInTheDirectionVectorsList`.
+- `distance(other_hex)` – Manhattan distance in cube space.
+- `reachable(movements_limit, obstacles: [])` – breadth-first expansion from the current hex, excluding obstacles; always includes the source hex.
+- `ring(radius)` – all hexes exactly `radius` steps away.
+- `spiral_ring(radius)` – concentric rings from radius 1..radius around the origin hex (raises `RadiusCannotBeZero` when radius is 0).
+- `linedraw(target)` – interpolated straight line of hexes between two points.
+- `field_of_view(grid, obstacles = [])` – hexes visible from the current hex that are not occluded along the line of sight.
+- `dijkstra_shortest_path(target, grid, obstacles: [])` – returns the shortest path inside the given grid; raises if the source or target is missing from the grid and skips obstacles. When `Rhex::ImageConfigs.path_image_config` is loaded, returned hexes carry that image config for rendering.
+- Utility math: include `Rhex::CubeHex::Math::Hexagon` to compute `movement_range(radius)` (number of reachable cells for a radius).
 
-Create a new hexagon `q = 0, r = -2`.
-</br>
-To understand what `q` and `r` mean, please have a look at http://www.redblobgames.com/grids/hexagons/#coordinates
-
+Example (path-finding with obstacles):
 ```ruby
-axial_hex = Rhex::AxialHex.new(0, -2)
-# => #<Rhex::CubeHex @data=nil, @image_config=nil, @q=0, @r=-2, @s=2>
+grid      = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
+source    = Rhex::AxialHex.new(0, 0)
+target    = Rhex::AxialHex.new(2, -1)
+obstacles = [Rhex::AxialHex.new(1, 0)]
 
-cube_hex = Rhex::AxialHex.new(0, -2, 2)
-# => #<Rhex::CubeHex @data=nil, @image_config=nil, @q=0, @r=-2, @s=2>
+path = source.dijkstra_shortest_path(target, grid, obstacles: obstacles)
 ```
 
-The main attributes in cube/axial hex are coordinates (`q, r, s`).
-</br>
-They are used for comparison of two different or same objects.
+## Working with grids
+- `Rhex::Grid[]` builds a grid from hexes; duplicates are overwritten by coordinate (`q`, `r`).
+- `#add`, `#merge`, `#include?`, `#exclude?`, `#size` behave like a set keyed on coordinates.
+- `Enumerable#to_grid` converts any collection of hexes into a `Grid` (or a custom grid class via arguments).
+- `#to_grid(klass, ...)` converts one grid into another grid implementation while reusing its contents.
 
+## Oriented grids (for rendering)
+- `Rhex::FlatToppedGrid` and `Rhex::PointyToppedGrid` decorate stored hexes to compute screen coordinates based on a `hex_size`.
+- Each oriented grid exposes `#hex_size` and `#pointy_topped?`, and every added hex is wrapped in the appropriate decorator (`Rhex::Decorators::FlatToppedHex` or `Rhex::Decorators::PointyToppedHex`).
+
+## Rendering to PNG
+- Any grid can be rendered with `grid.to_pic("filename", hex_size: 64, orientation: Rhex::GridToPic::DEFAULT_ORIENTATION)`.
+- The renderer:
+  - Builds an oriented grid (`:flat_topped` by default) and centers it automatically using `CanvasMarkups::AutoCanvasMarkup`.
+  - Draws each hex through `Rhex::Draw::Hexagon`, labeling it with its `q, r` coordinates.
+  - Saves the image to `images/filename.png` inside the gem/project root.
+- Default colors come from `Rhex::Draw::Hexagon::DEFAULT_IMAGE_CONFIG`. You can override per hex:
 ```ruby
-axial_hex = Rhex::AxialHex.new(0, -2)
-cube_hex = Rhex::AxialHex.new(0, -2, 2)
-
-axial_hex == cube_hex
-# => true
-
-axial_hex.eql?(cube_hex)
-# => true
-
-Hash[axial_hex, nil].key?(cube_hex)
-# => true
+config = Rhex::Draw::Hexagon::ImageConfig.new(
+  hexagon: Rhex::Draw::Hexagon::ImageProperties.new(color: "#FFFACD", stroke_color: "#222222"),
+  text:    Rhex::Draw::Hexagon::ImageProperties.new(color: "#333333", stroke_color: "none", font_size: 24)
+)
+hex = Rhex::AxialHex.new(0, 0, image_config: config)
+[hex].to_grid.to_pic("custom_hex")
 ```
 
-### Grid Basics
+## Image configuration files
+`Rhex::ImageConfigs.load!(path)` reads every `*_config.yml` in the given directory and defines readers named after each file (e.g., `path_image_config`). Each YAML entry is exposed as an `OpenStruct`, so keys like `hexagon.color`, `hexagon.stroke_color`, and `text.font_size` can be read by the renderer.
 
-Each array could be converted to `grid`.
+Example YAML (`path_image_config.yml`):
+```yaml
+hexagon:
+  color: "#B3D5E6"
+  stroke_color: "#B3B3B3"
+text:
+  color: "#000000"
+  stroke_color: "none"
+  font_size: 32
+```
+Usage:
 ```ruby
-[Rhex::AxialHex.new(0, -2)].to_grid
+Rhex::ImageConfigs.load!(Rhex.root.join("config", "images"))
+source = Rhex::AxialHex.new(0, 0, image_config: Rhex::ImageConfigs.source_image_config)
+grid   = [source].to_grid
+grid.to_pic("with_configs")
 ```
 
-Each grid could be converted to `picture`.
-```ruby
-filename = 'example'
-[Rhex::AxialHex.new(0, -2)].to_grid.to_pic(filename)
+## Testing
+The project uses RSpec with 100% coverage enforced by SimpleCov. Run the suite with:
+```shell
+bundle exec rspec
 ```
-
-#### Neighbors
-Returns array of hexagon's "neighbors".
-</br>
-The neighbors will be searched within a `grid`, if it was provided.
-
-```ruby
-grid = Rhex::Grid.new([Rhex::AxialHex.new(0, 0), ...])
-center = Rhex::AxialHex.new(0, -2)
-
-center.neighbors(grid: grid)
-# => [#<Rhex::CubeHex @q=1, @r=1, @s=-2>, #<Rhex::CubeHex @q=0, @r=1, @s=-1>, ...]
-```
-<img src="images/neighbors_inside_grid.png" height="500" alt="neighbors_inside_grid"/>
-
-#### Distance
-Get the distance between two hexagons.
-
-```ruby
-Rhex::AxialHex.new(0, 2).distance(Rhex::AxialHex.new(0, -2))
-# => 4
-```
-
-#### Dijkstra shortest path
-
-Finds the shortest path using the [Dijkstra algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm)
-
-```ruby
-obstacles = [Rhex::AxialHex.new(-1, 1), Rhex::AxialHex.new(-2, 1), ...]
-source = Rhex::AxialHex.new(1, 1)
-target = Rhex::AxialHex.new(-5, 5)
-
-grid = Rhex::Grid.new
-grid.add(source)
-
-source.dijkstra_shortest_path(target, grid, obstacles: obstacles)
-# => [#<Rhex::CubeHex @q=1, @r=1, @s=-2>, #<Rhex::CubeHex @q=1, @r=0, @s=-1>, ...]
-```
-<img src="images/dijkstra_shortest_path.png" height="500" alt="dijkstra_shortest_path"/>
-
-#### Linedraw
-
-Draws a line from one hex to another.
-
-```ruby
-source = Rhex::AxialHex.new(-4, 0)
-target = Rhex::AxialHex.new(4, -2)
-
-source.linedraw(target)
-# => [#<Rhex::CubeHex @q=-4, @r=0, @s=4>, #<Rhex::CubeHex @q=-3, @r=0, @s=3>, ...]
-```
-<img src="images/linedraw.png" height="500" alt="linedraw"/>
-
-#### Field of view
-
-Returns visible location which is not blocked by obstacles.
-
-```ruby
-grid = Rhex::Grid.new
-source = Rhex::AxialHex.new(-1, 2)
-obstacles = [Rhex::AxialHex.new(-1, 1), Rhex::AxialHex.new(-1, 0), ...]
-
-source.field_of_view(grid, obstacles)
-# => [#<Rhex::CubeHex @q=0, @r=0, @s=0>, #<Rhex::CubeHex @q=0, @r=1, @s=-1>, ...]
-```
-<img src="images/field_of_view.png" height="500" alt="field_of_view"/>
-
-#### Reachable
-
-Returns array of all hexes that can be reached in `movements_limit` steps.
-
-```ruby
-movements_limit = 3
-source = Rhex::AxialHex.new(0, 0)
-obstacles = [Rhex::AxialHex.new(1, -1), Rhex::AxialHex.new(2, -1), ...]
-
-source.reachable(movements_limit, obstacles: obstacles)
-# => [#<Rhex::CubeHex @q=0, @r=0, @s=0>, #<Rhex::CubeHex @q=0, @r=1, @s=-1>, ...]
-```
-<img src="images/reachable.png" height="500" alt="reachable"/>
-
-#### Ring
-
-Returns array of all hexes which are take `radius` steps away from the center starting from `Rhex::CubeHex::INITIAL_RING_VECTOR`.
-
-```ruby
-ring = 2
-center = Rhex::AxialHex.new(0, 0)
-
-center.ring(ring)
-# => [<Rhex::CubeHex @q=-2, @r=2, @s=0>, <Rhex::CubeHex @q=-1, @r=2, @s=-1>, ...]
-```
-<img src="images/ring.png" height="500" alt="ring"/>
-
