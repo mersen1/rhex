@@ -121,20 +121,31 @@ RSpec.describe(Rhex::CubeHex) do
     it "shows reachable hexes" do
       source = Rhex::AxialHex.new(0, 0)
       source.image_config = Rhex::ImageConfigs.source_image_config
+
       obstacles = coords_to_hexes([
         [1, -1], [2, -1], [2, 0], [2, 1], [1, 2], [0, 2],
         [-1, 2], [-1, 1], [-2, 1], [-1, -1], [0, -2], [1, -3],
       ], image_config: Rhex::ImageConfigs.obstacle_image_config)
+
       expected_reachable = coords_to_hexes([
         [0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [1, -2],
         [2, -3], [2, -2], [-2, -1], [-3, 0], [-2, 0], [-3, 1],
       ], image_config: Rhex::ImageConfigs.path_image_config)
 
-      obstacles
-        .to_grid
+      # Build a visually square 8x8 board using even-q offset -> axial mapping
+      base_grid =
+        (-4..3).flat_map do |col|
+          (-4..3).map do |row|
+            axial_r = row - (col / 2)
+            Rhex::AxialHex.new(col, axial_r)
+          end
+        end.to_grid
+
+      base_grid
+        .merge(obstacles)
         .merge(expected_reachable + [])
         .merge([source])
-        .to_pic("reachable", orientation: Rhex::GridToPic::POINTY_TOPPED)
+        .to_pic("reachable", orientation: Rhex::GridToPic::FLAT_TOPPED)
 
       expect(source.reachable(3, obstacles: obstacles)).to(contain_exactly(*expected_reachable))
     end
