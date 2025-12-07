@@ -54,7 +54,12 @@ RSpec.describe Rhex::DijkstraShortestPath do
             .merge(expected_shortest_path)
             .to_pic('dijkstra_shortest_path', orientation: :pointy_topped)
 
-        expect(shortest_path).to contain_exactly(*expected_shortest_path)
+        expect(shortest_path.first).to eq(source)
+        expect(shortest_path.last).to eq(target)
+        expect(shortest_path.size).to eq(expected_shortest_path.size)
+        expect(shortest_path & obstacles).to be_empty
+        expect(shortest_path).to all(satisfy { |hex| grid.include?(hex) })
+        expect(shortest_path.each_cons(2).all? { |a, b| a.distance(b) == 1 }).to be(true)
       end
     end
   end

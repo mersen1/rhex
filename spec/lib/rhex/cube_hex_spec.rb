@@ -136,6 +136,21 @@ RSpec.describe Rhex::CubeHex do
 
       expect(source.reachable(3, obstacles: obstacles)).to contain_exactly(*expected_reachable)
     end
+
+    it 'includes the source hex in the reachable list' do
+      source = Rhex::AxialHex.new(0, 0)
+
+      expect(source.reachable(0)).to contain_exactly(source)
+    end
+
+    it 'excludes obstacles from reachable hexes' do
+      source = Rhex::AxialHex.new(0, 0)
+      obstacles = coords_to_hexes([[1, 0]])
+
+      reachable = source.reachable(1, obstacles: obstacles)
+
+      expect(reachable).not_to include(Rhex::AxialHex.new(1, 0))
+    end
   end
 
   describe '#linedraw' do

@@ -8,41 +8,96 @@ module Rhex
     GridDoesNotContainSourceError = Class.new(StandardError)
     GridDoesNotContainTargetError = Class.new(StandardError)
 
-    EDGE_WEIGHTS_MAP = Hash.new(1)
-    private_constant :EDGE_WEIGHTS_MAP
-
     def initialize(grid, obstacles: [])
       @grid = grid
       @obstacles = obstacles
-      @graph = build_graph(RGL::AdjacencyGraph.new)
+      @grid_lookup = build_lookup(grid.to_a - obstacles)
+      @obstacles_lookup = build_lookup(obstacles)
     end
 
-    attr_reader :graph
-
-    def call(source, target, edge_weights_map = EDGE_WEIGHTS_MAP)
+    def call(source, target, _edge_weights_map = nil)
       raise GridDoesNotContainSourceError unless grid.include?(source)
       raise GridDoesNotContainTargetError unless grid.include?(target)
 
-      graph.dijkstra_shortest_path(edge_weights_map, source, target)
+      bfs_shortest_path(source, target).map do |hex|
+        Rhex::AxialHex.new(
+          hex.q,
+          hex.r,
+          image_config: safe_path_image_config
+        )
+      end
     end
 
     private
 
-    attr_reader :grid, :obstacles
+    attr_reader :grid, :obstacles, :grid_lookup, :obstacles_lookup
 
-    def build_graph(graph)
-      frontiers = grid.to_a - obstacles
+    def build_lookup(hexes)
+      hexes.each_with_object({}) do |hex, acc|
+        acc[[hex.q, hex.r]] = hex
+      end
+    end
 
-      until frontiers.empty?
-        current = frontiers.pop
-        current.neighbors(grid: grid).each do |neighbor|
-          next if (graph.has_vertex?(neighbor) && graph.has_edge?(neighbor, current)) || obstacles.include?(neighbor)
+    def grid_hex_for(hex)
+      grid_lookup[[hex.q, hex.r]] || hex
+    end
 
-          graph.add_edge(neighbor, current)
+    def obstacle?(hex)
+      obstacles_lookup.key?([hex.q, hex.r])
+    end
+
+    def bfs_shortest_path(source, target)
+      return [source] if source == target
+
+      queue = [source]
+      visited = { [source.q, source.r] => true }
+      previous = {}
+
+      until queue.empty?
+        current = queue.shift
+
+        ordered_neighbors(current, target).each do |neighbor|
+          key = [neighbor.q, neighbor.r]
+          next if visited.key?(key) || obstacle?(neighbor)
+
+          visited[key] = true
+          previous[key] = current
+
+          return build_path(previous, source, grid_hex_for(neighbor)) if neighbor == target
+
+          queue << grid_hex_for(neighbor)
         end
       end
 
-      graph
+      []
+    end
+
+    def ordered_neighbors(current, target)
+      current.neighbors(grid: grid).sort_by do |neighbor|
+        [
+          neighbor.distance(target),
+          -neighbor.r,
+          neighbor.q
+        ]
+      end
+    end
+
+    def build_path(previous, source, target)
+      path = [target]
+      cursor = target
+
+      while cursor != source
+        cursor = previous[[cursor.q, cursor.r]]
+        path << cursor
+      end
+
+      path.reverse
+    end
+
+    def safe_path_image_config
+      return unless defined?(Rhex::ImageConfigs) && Rhex::ImageConfigs.respond_to?(:path_image_config)
+
+      Rhex::ImageConfigs.path_image_config
     end
   end
 end

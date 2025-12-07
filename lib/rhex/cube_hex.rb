@@ -76,7 +76,7 @@ module Rhex
     def reachable(movements_limit = 1, obstacles: []) # rubocop:disable Metrics/MethodLength
       fringes = [[self]] # array of arrays of all hexes that can be reached in "movement_limit" steps
 
-      1.upto(movements_limit).each_with_object([]) do |move, reachable|
+      1.upto(movements_limit).each_with_object([self]) do |move, reachable|
         fringes.push([])
         fringes[move - 1].each do |hex|
           hex.neighbors.each do |neighbor|
