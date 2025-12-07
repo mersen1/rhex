@@ -52,8 +52,6 @@ module Rhex
 
       def draw_text(config)
         text_config = config || DEFAULT_IMAGE_CONFIG.text
-        return unless fonts_available?
-
         font_size = text_config.font_size || DEFAULT_IMAGE_CONFIG.text.font_size
 
         gc.fill(text_config.color || DEFAULT_IMAGE_CONFIG.text.color)

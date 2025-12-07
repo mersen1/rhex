@@ -11,55 +11,34 @@ RSpec.describe(Rhex) do
   end
 
   describe "font configuration" do
-    after do
-      described_class.configure { |config| config.font_path = nil }
-      ENV.delete("RHEX_FONT")
+    let(:bundled_font) { described_class.root.join("fonts", "Inconsolata-Regular.ttf").to_s }
+
+    before do
+      @original_font_path = described_class.font_path
     end
 
-    it "allows setting font_path through configure" do
-      allow(File).to(receive(:exist?).and_call_original)
-      allow(File).to(receive(:exist?).with("/tmp/custom.ttf").and_return(true))
+    after do
+      described_class.font_path = @original_font_path
+    end
+
+    it "returns the bundled font path by default" do
+      expect(described_class.font_path).to(eq(bundled_font))
+    end
+
+    it "allows overriding font path via configure" do
       described_class.configure { |config| config.font_path = "/tmp/custom.ttf" }
 
       expect(described_class.font_path).to(eq("/tmp/custom.ttf"))
     end
 
-    it "falls back to RHEX_FONT when not configured" do
-      allow(File).to(receive(:exist?).and_call_original)
-      allow(File).to(receive(:exist?).with("/env/font.ttf").and_return(true))
-      ENV["RHEX_FONT"] = "/env/font.ttf"
+    it "coerces assigned font paths to strings" do
+      described_class.font_path = Pathname.new("/tmp/custom_path.ttf")
 
-      expect(described_class.font_path).to(eq("/env/font.ttf"))
+      expect(described_class.font_path).to(eq("/tmp/custom_path.ttf"))
     end
 
-    it "raises when configured font does not exist" do
-      expect do
-        described_class.configure { |config| config.font_path = "/missing.ttf" }
-      end.to(raise_error(ArgumentError, /missing font file/))
-    end
-
-    it "raises when ENV font does not exist" do
-      ENV["RHEX_FONT"] = "/missing_env.ttf"
-
-      expect { described_class.font_path }.to(raise_error(ArgumentError, /missing font file/))
-    end
-
-    it "reports configured when set via configure" do
-      allow(File).to(receive(:exist?).with("/tmp/custom.ttf").and_return(true))
-      described_class.configure { |config| config.font_path = "/tmp/custom.ttf" }
-
-      expect(described_class.font_path_configured?).to(eq(true))
-    end
-
-    it "reports configured when ENV is set" do
-      allow(File).to(receive(:exist?).with("/env/font.ttf").and_return(true))
-      ENV["RHEX_FONT"] = "/env/font.ttf"
-
-      expect(described_class.font_path_configured?).to(eq(true))
-    end
-
-    it "reports not configured when neither ENV nor configure is set" do
-      expect(described_class.font_path_configured?).to(eq(false))
+    it "yields the Rhex module to configure blocks" do
+      expect { |blk| described_class.configure(&blk) }.to(yield_with_args(described_class))
     end
   end
 end

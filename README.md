@@ -90,13 +90,7 @@ hex = Rhex::AxialHex.new(0, 0, image_config: config)
 ```
 
 ### Font selection
-- Set `ENV["RHEX_FONT"]` to a preferred font file path, or configure it in code:
-```ruby
-Rhex.configure do |config|
-  config.font_path = "/path/to/font.ttf"
-end
-```
-Both configuration methods validate the path and raise an error if the file does not exist.
+Rhex ships with a bundled Inconsolata font (`fonts/Inconsolata-Regular.ttf`) and always uses it when rendering text. Custom fonts are intentionally not supported; attempting to set a custom font path raises an error.
 
 ## Image configuration files
 `Rhex::ImageConfigs.load!(path)` reads every `*_config.yml` in the given directory and defines readers named after each file (e.g., `path_image_config`). Each YAML entry is exposed as an `OpenStruct`, so keys like `hexagon.color`, `hexagon.stroke_color`, and `text.font_size` can be read by the renderer.

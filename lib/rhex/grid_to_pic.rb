@@ -43,7 +43,7 @@ module Rhex
 
     def draw_and_save(filename)
       gc.draw(imgl)
-      imgl.write(Rhex.root.join("images", "#{filename}.png"))
+      imgl.write(Rhex.root.join("images", "#{filename}.png").to_s)
     end
 
     def imgl
@@ -59,7 +59,7 @@ module Rhex
       @gc ||=
         begin
           gc = Magick::Draw.new
-          gc.font = Rhex.font_path if Rhex.font_path
+          gc.font = Rhex.font_path
           gc.text_align(Magick::CenterAlign)
           gc
         end

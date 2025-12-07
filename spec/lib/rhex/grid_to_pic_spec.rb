@@ -15,6 +15,8 @@ RSpec.describe(Rhex::GridToPic) do
         fill: nil,
         stroke: nil,
         polygon: nil,
+        font: nil,
+        :"font=" => nil,
         font_size: nil,
         text: nil,
         draw: nil
@@ -32,30 +34,11 @@ RSpec.describe(Rhex::GridToPic) do
 
     it "draws each hex and saves the image" do
       expect(gc).to(receive(:translate).with(kind_of(Numeric), kind_of(Numeric)))
+      expect(gc).to(receive(:font=).with(Rhex.font_path))
       expect(gc).to(receive(:draw).with(imgl))
-      expect(imgl).to(receive(:write).with(Rhex.root.join("images", "example.png")))
+      expect(imgl).to(receive(:write).with(Rhex.root.join("images", "example.png").to_s))
 
       described_class.new(hex_grid, hex_size: 2).call("example")
-    end
-
-    context "when a font path is configured" do
-      let(:font_path) { "/tmp/custom_font.ttf" }
-
-      before do
-        allow(File).to(receive(:exist?).and_call_original)
-        allow(File).to(receive(:exist?).with(font_path).and_return(true))
-        Rhex.configure { |config| config.font_path = font_path }
-      end
-
-      after do
-        Rhex.configure { |config| config.font_path = nil }
-      end
-
-      it "sets the font on the draw context" do
-        expect(gc).to(receive(:font=).with(font_path))
-
-        described_class.new(hex_grid, hex_size: 2).call("example")
-      end
     end
   end
 end
