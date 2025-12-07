@@ -37,5 +37,25 @@ RSpec.describe(Rhex::GridToPic) do
 
       described_class.new(hex_grid, hex_size: 2).call("example")
     end
+
+    context "when a font path is configured" do
+      let(:font_path) { "/tmp/custom_font.ttf" }
+
+      before do
+        allow(File).to(receive(:exist?).and_call_original)
+        allow(File).to(receive(:exist?).with(font_path).and_return(true))
+        Rhex.configure { |config| config.font_path = font_path }
+      end
+
+      after do
+        Rhex.configure { |config| config.font_path = nil }
+      end
+
+      it "sets the font on the draw context" do
+        expect(gc).to(receive(:font=).with(font_path))
+
+        described_class.new(hex_grid, hex_size: 2).call("example")
+      end
+    end
   end
 end

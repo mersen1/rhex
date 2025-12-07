@@ -89,6 +89,15 @@ hex = Rhex::AxialHex.new(0, 0, image_config: config)
 [hex].to_grid.to_pic("custom_hex")
 ```
 
+### Font selection
+- Set `ENV["RHEX_FONT"]` to a preferred font file path, or configure it in code:
+```ruby
+Rhex.configure do |config|
+  config.font_path = "/path/to/font.ttf"
+end
+```
+Both configuration methods validate the path and raise an error if the file does not exist.
+
 ## Image configuration files
 `Rhex::ImageConfigs.load!(path)` reads every `*_config.yml` in the given directory and defines readers named after each file (e.g., `path_image_config`). Each YAML entry is exposed as an `OpenStruct`, so keys like `hexagon.color`, `hexagon.stroke_color`, and `text.font_size` can be read by the renderer.
 
