@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/ImageMagick-6/pkgconfig:/usr/lib/x86_64-linux-gnu/ImageMagick-7/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig
 
     steps:
       - name: Checkout repository
