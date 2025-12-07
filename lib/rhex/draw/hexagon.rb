@@ -8,6 +8,7 @@ module Rhex
       ImageConfig = Struct.new(:hexagon, :text, keyword_init: true)
       ImageProperties = Struct.new(:color, :stroke_color, :font_size, keyword_init: true)
       Coordinates = Struct.new(:x, :y, keyword_init: true)
+      DEG_TO_RAD = Math::PI / 180.0
 
       DEFAULT_IMAGE_CONFIG = ImageConfig.new(
         hexagon: ImageProperties.new(
@@ -45,12 +46,8 @@ module Rhex
       def draw_hexagon(config)
         gc.fill(config.color)
 
-        polygon_coords = hex.class::ANGLES.each_with_object([]) do |angle, coords|
-          coords.concat(corner_coords(angle))
-        end
-
         gc.stroke(config.stroke_color)
-        gc.polygon(*polygon_coords)
+        gc.polygon(*polygon_coordinates)
       end
 
       def draw_text(config) # rubocop:disable Metrics/AbcSize
@@ -64,13 +61,17 @@ module Rhex
         )
       end
 
-      def corner_coords(angle)
-        angle_rad = Math::PI / 180 * angle
+      def polygon_coordinates
+        @polygon_coordinates ||= begin
+          angles_in_radians = hex.class::ANGLES.map { |angle| angle * DEG_TO_RAD }
 
-        [
-          coordinates.x + (hex.size * Math.cos(angle_rad)),
-          coordinates.y + (hex.size * Math.sin(angle_rad))
-        ]
+          angles_in_radians.flat_map do |angle_rad|
+            [
+              coordinates.x + (hex.size * Math.cos(angle_rad)),
+              coordinates.y + (hex.size * Math.sin(angle_rad))
+            ]
+          end
+        end
       end
     end
   end
