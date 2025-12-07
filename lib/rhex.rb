@@ -16,8 +16,6 @@ end
 
 module Rhex
   class << self
-    attr_writer :font_path
-
     def root
       Pathname.new(File.expand_path("..", __dir__))
     end
