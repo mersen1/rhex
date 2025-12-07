@@ -83,10 +83,24 @@ module Rhex
 
       # :nocov:
       def fonts_available?
-        return true if Rhex.font_path
+        return @fonts_available unless @fonts_available.nil?
 
-        Magick.fonts.any?
-      rescue Magick::ImageMagickError
+        return @fonts_available = true if Rhex.font_path
+
+        @fonts_available = text_renderable?
+      end
+
+      def text_renderable?
+        test_image = Magick::Image.new(1, 1) { |img| img.background_color = "transparent" }
+
+        Magick::Draw.new.tap do |test_gc|
+          test_gc.text_align(Magick::CenterAlign)
+          test_gc.text(0, 0, ".")
+          test_gc.draw(test_image)
+        end
+
+        true
+      rescue Magick::ImageMagickError, ArgumentError
         false
       end
       # :nocov:

@@ -9,10 +9,7 @@ require "json"
 require "pathname"
 require "rmagick"
 
-Zeitwerk::Loader.for_gem.tap do |loader|
-  loader.enable_reloading
-  loader.setup
-end
+Zeitwerk::Loader.for_gem.setup
 
 module Rhex
   class << self
