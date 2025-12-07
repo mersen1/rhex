@@ -53,6 +53,155 @@ grid.to_pic("sample_grid", hex_size: 48, orientation: Rhex::GridToPic::POINTY_TO
 - `dijkstra_shortest_path(target, grid, obstacles: [])` – returns the shortest path inside the given grid; raises if the source or target is missing from the grid and skips obstacles. When `Rhex::ImageConfigs.path_image_config` is loaded, returned hexes carry that image config for rendering.
 - Utility math: include `Rhex::CubeHex::Math::Hexagon` to compute `movement_range(radius)` (number of reachable cells for a radius).
 
+## Method reference for `Rhex::CubeHex` and `Rhex::AxialHex`
+
+### neighbors(grid: nil) -> Array<CubeHex>
+Returns all six neighbors. When a `grid` is provided, only neighbors that exist inside that grid are returned.
+
+![Neighbors](images/neighbors.png)
+```ruby
+hex = Rhex::AxialHex.new(0, 0)
+hex.neighbors             # => 6 surrounding hexes
+hex.neighbors(grid: [hex].to_grid) # => [] because only origin is in the grid
+```
+
+### neighbor(direction_index, grid: nil) -> CubeHex?
+Returns a single neighbor by index `0..5`. Raises `NotInTheDirectionVectorsList` for an invalid index. When `grid` is passed and the neighbor is outside it, returns `nil`.
+
+![Neighbors inside grid](images/neighbors_inside_grid.png)
+```ruby
+grid = Rhex::AxialHex.new(0, 0).spiral_ring(1).to_grid
+grid.origin.neighbor(0)           # => neighbor hex
+grid.origin.neighbor(0, grid: [grid.origin].to_grid) # => nil
+```
+
+### distance(other) -> Integer
+Manhattan distance between two hexes in cube coordinates.
+
+![Ring](images/ring.png)
+```ruby
+a = Rhex::AxialHex.new(0, 0)
+b = Rhex::AxialHex.new(2, -1)
+a.distance(b) # => 2
+```
+
+### reachable(movements_limit = 1, obstacles: []) -> Array<CubeHex>
+All cells reachable within the given number of steps, always including the source. Any hexes listed in `obstacles` are excluded from the result.
+
+![Reachable](images/reachable.png)
+```ruby
+start = Rhex::AxialHex.new(0, 0)
+obstacle = Rhex::AxialHex.new(1, 0)
+start.reachable(2, obstacles: [obstacle])
+```
+
+### ring(radius = 1) -> Array<CubeHex>
+All cells exactly `radius` steps away from the current hex.
+
+![Ring](images/ring.png)
+```ruby
+center = Rhex::AxialHex.new(0, 0)
+center.ring(2) # => hexes at distance 2
+```
+
+### spiral_ring(radius = 1) -> Array<CubeHex>
+Concentric rings for radii `1..radius` plus the origin. Raises `RadiusCannotBeZero` when `radius` is `0`.
+
+![Spiral ring](images/spiral_ring.png)
+```ruby
+center = Rhex::AxialHex.new(0, 0)
+center.spiral_ring(2) # => origin + rings 1 and 2
+```
+
+### linedraw(target) -> Array<CubeHex>
+Straight line of hexes between two points, rounded to the nearest centers; includes both endpoints.
+
+![Line draw](images/linedraw.png)
+```ruby
+start = Rhex::AxialHex.new(0, 0)
+finish = Rhex::AxialHex.new(3, -2)
+start.linedraw(finish)
+```
+
+### field_of_view(grid, obstacles = []) -> Array<CubeHex>
+All grid cells visible from the current hex without intersecting obstacles. With empty `obstacles`, returns every cell except the current one.
+
+![Field of view](images/field_of_view.png)
+```ruby
+grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
+source = Rhex::AxialHex.new(0, 0)
+obstacles = [Rhex::AxialHex.new(1, 0)]
+source.field_of_view(grid, obstacles)
+```
+
+### dijkstra_shortest_path(target, grid, obstacles: []) -> Array<AxialHex>
+Shortest path inside the grid using BFS ordering of neighbors. Raises if the source or target is missing from the grid. Returns an empty array when unreachable. When `ImageConfigs.path_image_config` is loaded, path cells carry that image config.
+
+![Dijkstra shortest path](images/dijkstra_shortest_path.png)
+```ruby
+grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
+src  = Rhex::AxialHex.new(0, 0)
+dst  = Rhex::AxialHex.new(2, -1)
+src.dijkstra_shortest_path(dst, grid, obstacles: [Rhex::AxialHex.new(1, 0)])
+```
+
+### reflection_q/r/s(reference_point = CubeHex.new(0,0,0)) -> CubeHex
+Mirror the hex across the `q`, `r`, or `s` axis relative to an optional reference point.
+
+```ruby
+hex = Rhex::AxialHex.new(1, -2).to_cube
+hex.reflection_q            # mirror over q axis through origin
+hex.reflection_r(reference_point: Rhex::CubeHex.new(1, 0, -1))
+```
+
+### add(hex) / subtract(hex) -> CubeHex
+Coordinate-wise addition or subtraction, reused by several other operations.
+
+```ruby
+a = Rhex::AxialHex.new(0, 0).to_cube
+b = Rhex::AxialHex.new(1, -1).to_cube
+a.add(b)      # => CubeHex(1, -1, 0)
+a.subtract(b) # => CubeHex(-1, 1, 0)
+```
+
+### to_axial -> AxialHex / AxialHex#to_cube -> CubeHex
+Safe conversions between cube and axial representations.
+
+```ruby
+cube  = Rhex::CubeHex.new(0, 1, -1)
+axial = cube.to_axial
+axial.to_cube # => original cube
+```
+
+### image_config (attr_accessor) / data (attr_reader)
+Arbitrary payload and rendering options preserved and propagated into derived hexes.
+
+```ruby
+config = Rhex::Draw::Hexagon::DEFAULT_IMAGE_CONFIG
+hex = Rhex::AxialHex.new(0, 0, data: { terrain: :grass }, image_config: config)
+hex.image_config # => returns image properties
+hex.data         # => { terrain: :grass }
+```
+
+### ==, eql?, hash
+Coordinate-based equality and hashing, suitable for hash keys and set semantics.
+
+```ruby
+a = Rhex::AxialHex.new(0, 0)
+b = Rhex::AxialHex.new(0, 0)
+a == b    # true
+{ a => "same" }[b] # "same"
+```
+
+### Rhex::CubeHex::Math::Hexagon#movement_range(radius) -> Integer
+Number of cells reachable within `radius` steps (including the origin).
+
+![Reachable](images/reachable.png)
+```ruby
+include Rhex::CubeHex::Math::Hexagon
+movement_range(2) # => 19
+```
+
 Example (path-finding with obstacles):
 ```ruby
 grid      = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
