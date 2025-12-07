@@ -32,10 +32,7 @@ module Rhex
       def load_file!(file_path)
         extname = File.extname(file_path)
         filename = File.basename(file_path, extname)
-        config = JSON.parse(
-          YAML.safe_load(File.read(file_path)).to_json,
-          object_class: OpenStruct # rubocop:disable Style/OpenStructUse
-        )
+        config = JSON.parse(YAML.safe_load(File.read(file_path)).to_json).with_indifferent_access
 
         configs[normalize_key(filename)] = config
       end

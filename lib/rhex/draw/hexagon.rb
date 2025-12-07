@@ -5,34 +5,35 @@ module Rhex
     class Hexagon
       extend Forwardable
 
-      ImageConfig = Struct.new(:hexagon, :text, keyword_init: true)
-      ImageProperties = Struct.new(:color, :stroke_color, :font_size, :size, keyword_init: true)
       Coordinates = Struct.new(:x, :y, keyword_init: true)
       DEG_TO_RAD = Math::PI / 180.0
-
-      DEFAULT_IMAGE_CONFIG = ImageConfig.new(
-        hexagon: ImageProperties.new(
+      DEFAULT_IMAGE_CONFIG = {
+        hexagon: {
           color: "#F4F4F1",
           stroke_color: "#B3B3B3",
-          size: nil
-        ),
-        text: ImageProperties.new(
+          size: 64,
+        },
+        text: {
           color: "#000000",
           stroke_color: "none",
-          font_size: 32
-        )
-      ).freeze
-      private_constant :DEFAULT_IMAGE_CONFIG
+          font_size: 32,
+        },
+      }.freeze
+      private_constant :Coordinates, :DEG_TO_RAD, :DEFAULT_IMAGE_CONFIG
 
       def initialize(gc:, hex:, default_image_config: DEFAULT_IMAGE_CONFIG)
         @gc = gc
         @hex = hex
+
+        validation = Rhex::Contracts::ImageConfigContract.new.call(default_image_config)
+        validation.failure? && raise(ArgumentError, "Invalid image_config: #{validation.errors.to_h}")
+
         @default_image_config = default_image_config
       end
 
       def call
-        draw_hexagon(image_config.hexagon)
-        draw_text(image_config.text)
+        draw_hexagon(image_config[:hexagon])
+        draw_text(image_config[:text])
       end
 
       private
@@ -42,42 +43,23 @@ module Rhex
       def_delegators :hex, :coordinates
 
       def image_config
-        config = hex.image_config
-        return default_image_config if config.nil?
-
-        ImageConfig.new(
-          hexagon: merge_properties(default_image_config.hexagon, config.hexagon),
-          text: merge_properties(default_image_config.text, config.text)
-        )
-      end
-
-      def merge_properties(default_props, custom_props)
-        return default_props if custom_props.nil?
-
-        custom_hash = custom_props.to_h
-
-        ImageProperties.new(
-          color: custom_hash.fetch(:color, default_props.color),
-          stroke_color: custom_hash.fetch(:stroke_color, default_props.stroke_color),
-          font_size: custom_hash.fetch(:font_size, default_props.font_size),
-          size: custom_hash.fetch(:size, default_props.size)
-        )
+        hex.image_config || default_image_config
       end
 
       def draw_hexagon(config)
-        gc.fill(config.color)
+        gc.fill(config[:color])
 
-        gc.stroke(config.stroke_color)
+        gc.stroke(config[:stroke_color])
         gc.polygon(*polygon_coordinates)
       end
 
       def draw_text(config)
-        gc.fill(config.color)
-        gc.stroke(config.stroke_color)
-        gc.font_size(config.font_size)
+        gc.fill(config[:color])
+        gc.stroke(config[:stroke_color])
+        gc.font_size(config[:font_size])
 
         gc.text(
-          coordinates.x, coordinates.y + (config.font_size / Math::PI),
+          coordinates.x, coordinates.y + (config[:font_size] / Math::PI),
           "#{hex.q}, #{hex.r}"
         )
       end
@@ -96,7 +78,7 @@ module Rhex
       end
 
       def hexagon_size
-        image_config.hexagon.size || hex.size
+        image_config[:hexagon][:size] || hex.size
       end
     end
   end

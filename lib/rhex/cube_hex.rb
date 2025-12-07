@@ -22,11 +22,20 @@ module Rhex
       @r = r
       @s = s
       @data = data
-      @image_config = image_config
+
+      self.image_config = image_config
     end
 
-    attr_reader :q, :r, :s, :data
-    attr_accessor :image_config
+    attr_reader :q, :r, :s, :data, :image_config
+
+    def image_config=(value)
+      return @image_config = nil unless value
+
+      validation = Rhex::Contracts::ImageConfigContract.new.call(value)
+      validation.failure? && raise(ArgumentError, "Invalid image_config: #{validation.errors.to_h}")
+
+      @image_config = validation.to_h
+    end
 
     def hash
       { q: q, r: r, s: s }.hash

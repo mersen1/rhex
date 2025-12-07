@@ -14,6 +14,8 @@ Gem::Specification.new do |s|
   s.license     = "MIT"
   s.required_ruby_version = ">= 3.3.7"
 
+  s.add_dependency("activesupport")
+  s.add_dependency("dry-validation")
   s.add_dependency("rgl")
   s.add_dependency("rmagick")
   s.add_dependency("zeitwerk", "~>2.6")

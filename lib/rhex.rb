@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
+require "active_support/core_ext/hash/indifferent_access"
+require "dry/validation"
 require "zeitwerk"
-require "ostruct"
 require "yaml"
 require "delegate"
 require "forwardable"

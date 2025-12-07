@@ -32,10 +32,11 @@ RSpec.describe(Rhex::Draw::Hexagon) do
     end
 
     it "draws using custom image config when provided" do
-      custom_config = described_class::ImageConfig.new(
-        hexagon: described_class::ImageProperties.new(color: "#fff", stroke_color: "#000"),
-        text: described_class::ImageProperties.new(color: "#123", stroke_color: "#321", font_size: 10)
-      )
+      custom_config = {
+        hexagon: { color: "#fff", stroke_color: "#000" },
+        text: { color: "#123", stroke_color: "#321", font_size: 10 },
+      }
+
       hex.image_config = custom_config
       allow(gc).to(receive(:fill))
       allow(gc).to(receive(:stroke))
