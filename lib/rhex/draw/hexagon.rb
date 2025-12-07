@@ -52,6 +52,7 @@ module Rhex
 
       def draw_text(config)
         text_config = config || DEFAULT_IMAGE_CONFIG.text
+        return unless fonts_available?
 
         font_size = text_config.font_size || DEFAULT_IMAGE_CONFIG.text.font_size
 
@@ -79,6 +80,16 @@ module Rhex
           end
         end
       end
+
+      # :nocov:
+      def fonts_available?
+        return true if Rhex.font_path
+
+        Magick.fonts.any?
+      rescue Magick::ImageMagickError
+        false
+      end
+      # :nocov:
     end
   end
 end
