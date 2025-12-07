@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe(Rhex::DijkstraShortestPath) do
+RSpec.describe(Rhex::BfsPath) do
   include AxialHexHelpers
   include GridHelpers
 
@@ -52,7 +52,7 @@ RSpec.describe(Rhex::DijkstraShortestPath) do
 
         grid.merge(obstacles)
           .merge(expected_shortest_path)
-          .to_pic("dijkstra_shortest_path", orientation: :pointy_topped)
+          .to_pic("bfs_path", orientation: :pointy_topped)
 
         expect(shortest_path.first).to(eq(source))
         expect(shortest_path.last).to(eq(target))

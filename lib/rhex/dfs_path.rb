@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
-require "rgl/adjacency"
-require "rgl/dijkstra"
-
 module Rhex
-  class DijkstraShortestPath
+  class DfsPath
     GridDoesNotContainSourceError = Class.new(StandardError)
     GridDoesNotContainTargetError = Class.new(StandardError)
 
@@ -15,17 +12,30 @@ module Rhex
       @obstacles_lookup = build_lookup(obstacles)
     end
 
-    def call(source, target, _edge_weights_map = nil)
+    def call(source, target)
       raise GridDoesNotContainSourceError unless grid.include?(source)
       raise GridDoesNotContainTargetError unless grid.include?(target)
 
-      bfs_shortest_path(source, target).map do |hex|
-        Rhex::AxialHex.new(
-          hex.q,
-          hex.r,
-          image_config: safe_path_image_config
-        )
+      return decorate_path([source]) if source == target
+
+      visited = { [source.q, source.r] => true }
+      stack = [[source, [source]]]
+
+      until stack.empty?
+        current, path = stack.pop
+        return decorate_path(path) if current == target
+
+        ordered_neighbors(current, target).each do |neighbor|
+          key = [neighbor.q, neighbor.r]
+          next if visited.key?(key) || obstacle?(neighbor)
+
+          visited[key] = true
+          next_hex = grid_hex_for(neighbor)
+          stack.push([next_hex, path + [next_hex]])
+        end
       end
+
+      []
     end
 
     private
@@ -46,32 +56,6 @@ module Rhex
       obstacles_lookup.key?([hex.q, hex.r])
     end
 
-    def bfs_shortest_path(source, target)
-      return [source] if source == target
-
-      queue = [source]
-      visited = { [source.q, source.r] => true }
-      previous = {}
-
-      until queue.empty?
-        current = queue.shift
-
-        ordered_neighbors(current, target).each do |neighbor|
-          key = [neighbor.q, neighbor.r]
-          next if visited.key?(key) || obstacle?(neighbor)
-
-          visited[key] = true
-          previous[key] = current
-
-          return build_path(previous, source, grid_hex_for(neighbor)) if neighbor == target
-
-          queue << grid_hex_for(neighbor)
-        end
-      end
-
-      []
-    end
-
     def ordered_neighbors(current, target)
       current.neighbors(grid: grid).sort_by do |neighbor|
         [
@@ -82,16 +66,14 @@ module Rhex
       end
     end
 
-    def build_path(previous, source, target)
-      path = [target]
-      cursor = target
-
-      while cursor != source
-        cursor = previous[[cursor.q, cursor.r]]
-        path << cursor
+    def decorate_path(path)
+      path.map do |hex|
+        Rhex::AxialHex.new(
+          hex.q,
+          hex.r,
+          image_config: safe_path_image_config
+        )
       end
-
-      path.reverse
     end
 
     def safe_path_image_config

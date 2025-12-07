@@ -186,21 +186,39 @@ RSpec.describe(Rhex::CubeHex) do
     end
   end
 
-  describe "#dijkstra_shortest_path" do
-    it "calls DijkstraShortestPath" do
+  describe "#bfs_shortest_path" do
+    it "uses BfsPath" do
       source = Rhex::AxialHex.new(0, 0)
       target = instance_double(Rhex::AxialHex)
       grid = instance_double(Rhex::Grid)
       obstacles = instance_double(Array)
 
       shortest_path = double
-      dijkstra_shortest_path_instance = double
+      bfs_path_instance = double
 
-      expect(Rhex::DijkstraShortestPath)
-        .to(receive(:new).with(grid, obstacles: obstacles).and_return(dijkstra_shortest_path_instance))
-      expect(dijkstra_shortest_path_instance).to(receive(:call).with(source, target).and_return(shortest_path))
+      expect(Rhex::BfsPath)
+        .to(receive(:new).with(grid, obstacles: obstacles).and_return(bfs_path_instance))
+      expect(bfs_path_instance).to(receive(:call).with(source, target).and_return(shortest_path))
 
-      expect(source.dijkstra_shortest_path(target, grid, obstacles: obstacles)).to(eq(shortest_path))
+      expect(source.bfs_shortest_path(target, grid, obstacles: obstacles)).to(eq(shortest_path))
+    end
+  end
+
+  describe "#dfs_path" do
+    it "uses DfsPath" do
+      source = Rhex::AxialHex.new(0, 0)
+      target = instance_double(Rhex::AxialHex)
+      grid = instance_double(Rhex::Grid)
+      obstacles = instance_double(Array)
+
+      path = double
+      dfs_path_instance = double
+
+      expect(Rhex::DfsPath)
+        .to(receive(:new).with(grid, obstacles: obstacles).and_return(dfs_path_instance))
+      expect(dfs_path_instance).to(receive(:call).with(source, target).and_return(path))
+
+      expect(source.dfs_path(target, grid, obstacles: obstacles)).to(eq(path))
     end
   end
 

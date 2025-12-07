@@ -113,8 +113,12 @@ module Rhex
       grid_except_self.filter_map { |hex| hex if linedraw(hex).intersection(obstacles).empty? }
     end
 
-    def dijkstra_shortest_path(target, grid, obstacles: [])
-      Rhex::DijkstraShortestPath.new(grid, obstacles: obstacles).call(self, target)
+    def bfs_shortest_path(target, grid, obstacles: [])
+      Rhex::BfsPath.new(grid, obstacles: obstacles).call(self, target)
+    end
+
+    def dfs_path(target, grid, obstacles: [])
+      Rhex::DfsPath.new(grid, obstacles: obstacles).call(self, target)
     end
 
     def distance(hex)

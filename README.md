@@ -50,7 +50,8 @@ grid.to_pic("sample_grid", hex_size: 48, orientation: Rhex::GridToPic::POINTY_TO
 - `spiral_ring(radius)` – concentric rings from radius 1..radius around the origin hex (raises `RadiusCannotBeZero` when radius is 0).
 - `linedraw(target)` – interpolated straight line of hexes between two points.
 - `field_of_view(grid, obstacles = [])` – hexes visible from the current hex that are not occluded along the line of sight.
-- `dijkstra_shortest_path(target, grid, obstacles: [])` – returns the shortest path inside the given grid; raises if the source or target is missing from the grid and skips obstacles. When `Rhex::ImageConfigs.path_image_config` is loaded, returned hexes carry that image config for rendering.
+- `bfs_shortest_path(target, grid, obstacles: [])` – breadth-first shortest path inside the given grid; raises if the source or target is missing from the grid and skips obstacles. When `Rhex::ImageConfigs.path_image_config` is loaded, returned hexes carry that image config for rendering.
+- `dfs_path(target, grid, obstacles: [])` – depth-first path search (first path found, not necessarily the shortest) with the same grid/obstacle handling as `bfs_shortest_path`.
 - Utility math: include `Rhex::CubeHex::Math::Hexagon` to compute `movement_range(radius)` (number of reachable cells for a radius).
 
 ## Method reference for `Rhex::CubeHex` and `Rhex::AxialHex`
@@ -134,15 +135,26 @@ obstacles = [Rhex::AxialHex.new(1, 0)]
 source.field_of_view(grid, obstacles)
 ```
 
-### dijkstra_shortest_path(target, grid, obstacles: []) -> Array<AxialHex>
-Shortest path inside the grid using BFS ordering of neighbors. Raises if the source or target is missing from the grid. Returns an empty array when unreachable. When `ImageConfigs.path_image_config` is loaded, path cells carry that image config.
+### bfs_shortest_path(target, grid, obstacles: []) -> Array<AxialHex>
+Shortest path inside the grid using breadth-first traversal. Raises if the source or target is missing from the grid. Returns an empty array when unreachable. When `ImageConfigs.path_image_config` is loaded, path cells carry that image config.
 
-![Dijkstra shortest path](images/dijkstra_shortest_path.png)
+![BFS shortest path](images/bfs_path.png)
 ```ruby
 grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
 src  = Rhex::AxialHex.new(0, 0)
 dst  = Rhex::AxialHex.new(2, -1)
-src.dijkstra_shortest_path(dst, grid, obstacles: [Rhex::AxialHex.new(1, 0)])
+src.bfs_shortest_path(dst, grid, obstacles: [Rhex::AxialHex.new(1, 0)])
+```
+
+### dfs_path(target, grid, obstacles: []) -> Array<AxialHex>
+Depth-first traversal that returns the first path it discovers to the target (not guaranteed to be the shortest). Obstacle handling and validation mirror `bfs_shortest_path`; unreachable paths return an empty array.
+
+![DFS path](images/dfs_path.png)
+```ruby
+grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
+src  = Rhex::AxialHex.new(0, 0)
+dst  = Rhex::AxialHex.new(2, -1)
+src.dfs_path(dst, grid, obstacles: [Rhex::AxialHex.new(1, 0)])
 ```
 
 ### reflection_q/r/s(reference_point = CubeHex.new(0,0,0)) -> CubeHex
@@ -209,7 +221,7 @@ source    = Rhex::AxialHex.new(0, 0)
 target    = Rhex::AxialHex.new(2, -1)
 obstacles = [Rhex::AxialHex.new(1, 0)]
 
-path = source.dijkstra_shortest_path(target, grid, obstacles: obstacles)
+path = source.bfs_shortest_path(target, grid, obstacles: obstacles)
 ```
 
 ## Working with grids
