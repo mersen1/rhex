@@ -116,7 +116,6 @@ Hex methods operate on individual coordinates and small derived collections.
 ### distance(other) -> Integer
 Manhattan distance between two hexes in cube coordinates.
 
-![Ring](images/ring.png)
 ```ruby
 a = Rhex::AxialHex.new(0, 0)
 b = Rhex::AxialHex.new(2, -1)

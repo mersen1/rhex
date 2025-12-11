@@ -5,12 +5,11 @@ module Rhex
     GridDoesNotContainSourceError = Class.new(StandardError)
     GridDoesNotContainTargetError = Class.new(StandardError)
     PathNotFoundError = Class.new(StandardError)
+    NativeCallError = Class.new(StandardError)
 
     def initialize(grid, obstacles: [])
       @grid = grid
       @obstacles = obstacles
-      @grid_lookup = build_lookup(grid.to_a - obstacles)
-      @obstacles_lookup = build_lookup(obstacles)
     end
 
     def call(source, target)
@@ -19,63 +18,66 @@ module Rhex
 
       return [source] if source == target
 
-      best_path = nil
-      visited = { [source.q, source.r] => 1 } # store shortest depth seen so far
-      stack = [[source, [source]]]
+      path = native_path(source, target)
+      return path unless path.nil?
 
-      until stack.empty?
-        current, path = stack.pop
-        if current == target
-          best_path = path if best_path.nil? || path.length < best_path.length
-          next
-        end
-
-        # prune branches that are already longer than the best we have
-        next if best_path && path.length >= best_path.length
-
-        ordered_neighbors(current, target).each do |neighbor|
-          key = [neighbor.q, neighbor.r]
-          next if obstacle?(neighbor)
-
-          next_length = path.length + 1
-          # allow revisit only if we found a shorter path to the same node
-          next if visited.key?(key) && visited[key] <= next_length
-
-          visited[key] = next_length
-          next_hex = grid_hex_for(neighbor)
-          stack.push([next_hex, path + [next_hex]])
-        end
-      end
-
-      best_path || (raise PathNotFoundError)
+      raise PathNotFoundError
     end
 
     private
 
-    attr_reader :grid, :obstacles, :grid_lookup, :obstacles_lookup
-
-    def build_lookup(hexes)
-      hexes.each_with_object({}) do |hex, acc|
-        acc[[hex.q, hex.r]] = hex
-      end
-    end
+    attr_reader :grid, :obstacles
 
     def grid_hex_for(hex)
-      grid_lookup[[hex.q, hex.r]] || hex
+      grid.fetch(hex) || hex
     end
 
-    def obstacle?(hex)
-      obstacles_lookup.key?([hex.q, hex.r])
+    def native_path(source, target)
+      hexes = grid.to_a
+      return nil if hexes.empty?
+
+      grid_qs, grid_rs = coordinate_pointers(hexes)
+      obstacles_qs, obstacles_rs = coordinate_pointers(obstacles)
+
+      out_capacity = hexes.size
+      out_qs = FFI::MemoryPointer.new(:int32, out_capacity)
+      out_rs = FFI::MemoryPointer.new(:int32, out_capacity)
+
+      count = Rhex::Native::Grid.dfs_path(
+        grid_qs,
+        grid_rs,
+        hexes.size,
+        source.q,
+        source.r,
+        target.q,
+        target.r,
+        obstacles_qs,
+        obstacles_rs,
+        obstacles.size,
+        out_qs,
+        out_rs,
+        out_capacity
+      )
+
+      raise NativeCallError if count.negative?
+      return nil if count.zero?
+
+      coordinates_from_pointers(out_qs, out_rs, count).map { |(q, r)| grid_hex_for(Rhex::AxialHex.new(q, r)) }
     end
 
-    def ordered_neighbors(current, target)
-      grid.neighbors(current).sort_by do |neighbor|
-        [
-          neighbor.distance(target),
-          -neighbor.r,
-          neighbor.q,
-        ]
-      end
+    def coordinate_pointers(hexes)
+      return [FFI::Pointer::NULL, FFI::Pointer::NULL] if hexes.empty?
+
+      [
+        FFI::MemoryPointer.new(:int32, hexes.size).put_array_of_int32(0, hexes.map(&:q)),
+        FFI::MemoryPointer.new(:int32, hexes.size).put_array_of_int32(0, hexes.map(&:r)),
+      ]
+    end
+
+    def coordinates_from_pointers(qs_pointer, rs_pointer, count)
+      return [] if count <= 0
+
+      qs_pointer.get_array_of_int32(0, count).zip(rs_pointer.get_array_of_int32(0, count))
     end
   end
 end

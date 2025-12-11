@@ -16,10 +16,12 @@ Gem::Specification.new do |s|
 
   s.add_dependency("activesupport")
   s.add_dependency("dry-validation")
+  s.add_dependency("ffi")
   s.add_dependency("rgl")
   s.add_dependency("rmagick")
   s.add_dependency("zeitwerk", "~>2.6")
 
+  s.add_development_dependency("benchmark-ips")
   s.add_development_dependency("pry-byebug")
   s.add_development_dependency("racc")
   s.add_development_dependency("rspec")

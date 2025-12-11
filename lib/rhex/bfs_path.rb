@@ -5,88 +5,79 @@ module Rhex
     GridDoesNotContainSourceError = Class.new(StandardError)
     GridDoesNotContainTargetError = Class.new(StandardError)
     PathNotFoundError = Class.new(StandardError)
+    NativeCallError = Class.new(StandardError)
 
     def initialize(grid, obstacles: [])
       @grid = grid
       @obstacles = obstacles
-      @grid_lookup = build_lookup(grid.to_a - obstacles)
-      @obstacles_lookup = build_lookup(obstacles)
     end
 
     def call(source, target)
       raise GridDoesNotContainSourceError unless grid.include?(source)
       raise GridDoesNotContainTargetError unless grid.include?(target)
 
-      path = bfs_path(source, target)
-      raise PathNotFoundError if path.empty?
+      return [source] if source == target
 
-      path
+      path = native_path(source, target)
+      return path unless path.nil?
+
+      raise PathNotFoundError
     end
 
     private
 
-    attr_reader :grid, :obstacles, :grid_lookup, :obstacles_lookup
-
-    def build_lookup(hexes)
-      hexes.each_with_object({}) do |hex, acc|
-        acc[[hex.q, hex.r]] = hex
-      end
-    end
+    attr_reader :grid, :obstacles
 
     def grid_hex_for(hex)
-      grid_lookup[[hex.q, hex.r]] || hex
+      grid.fetch(hex) || hex
     end
 
-    def obstacle?(hex)
-      obstacles_lookup.key?([hex.q, hex.r])
+    def native_path(source, target)
+      hexes = grid.to_a
+      return nil if hexes.empty?
+
+      grid_qs, grid_rs = coordinate_pointers(hexes)
+      obstacles_qs, obstacles_rs = coordinate_pointers(obstacles)
+
+      out_capacity = hexes.size
+      out_qs = FFI::MemoryPointer.new(:int32, out_capacity)
+      out_rs = FFI::MemoryPointer.new(:int32, out_capacity)
+
+      count = Rhex::Native::Grid.bfs_path(
+        grid_qs,
+        grid_rs,
+        hexes.size,
+        source.q,
+        source.r,
+        target.q,
+        target.r,
+        obstacles_qs,
+        obstacles_rs,
+        obstacles.size,
+        out_qs,
+        out_rs,
+        out_capacity
+      )
+
+      raise NativeCallError if count.negative?
+      return nil if count.zero?
+
+      coordinates_from_pointers(out_qs, out_rs, count).map { |(q, r)| grid_hex_for(Rhex::AxialHex.new(q, r)) }
     end
 
-    def bfs_path(source, target)
-      return [source] if source == target
+    def coordinate_pointers(hexes)
+      return [FFI::Pointer::NULL, FFI::Pointer::NULL] if hexes.empty?
 
-      queue = [source]
-      visited = { [source.q, source.r] => true }
-      previous = {}
-
-      until queue.empty?
-        current = queue.shift
-
-        ordered_neighbors(current, target).each do |neighbor|
-          key = [neighbor.q, neighbor.r]
-          next if visited.key?(key) || obstacle?(neighbor)
-
-          visited[key] = true
-          previous[key] = current
-
-          return build_path(previous, source, grid_hex_for(neighbor)) if neighbor == target
-
-          queue << grid_hex_for(neighbor)
-        end
-      end
-
-      []
+      [
+        FFI::MemoryPointer.new(:int32, hexes.size).put_array_of_int32(0, hexes.map(&:q)),
+        FFI::MemoryPointer.new(:int32, hexes.size).put_array_of_int32(0, hexes.map(&:r)),
+      ]
     end
 
-    def ordered_neighbors(current, target)
-      grid.neighbors(current).sort_by do |neighbor|
-        [
-          neighbor.distance(target),
-          -neighbor.r,
-          neighbor.q,
-        ]
-      end
-    end
+    def coordinates_from_pointers(qs_pointer, rs_pointer, count)
+      return [] if count <= 0
 
-    def build_path(previous, source, target)
-      path = [target]
-      cursor = target
-
-      while cursor != source
-        cursor = previous[[cursor.q, cursor.r]]
-        path << cursor
-      end
-
-      path.reverse
+      qs_pointer.get_array_of_int32(0, count).zip(rs_pointer.get_array_of_int32(0, count))
     end
   end
 end

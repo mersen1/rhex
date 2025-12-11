@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "rhex/native/grid"
+
 module Rhex
   class Grid
     include Enumerable
@@ -88,40 +90,56 @@ module Rhex
 
     def reachable(source, movements_limit = 1, obstacles: [])
       start = fetch(source) || raise(SourceHexNotInGrid)
-      obstacle_lookup = lookup_by_coordinates(obstacles)
+      hexes = to_a
 
-      fringes = [[start]]
-      visited = [start]
-      visited_lookup = { coordinates_key(start) => true }
+      grid_qs, grid_rs = coordinate_pointers(hexes)
+      obstacles_qs, obstacles_rs = coordinate_pointers(obstacles)
 
-      1.upto(movements_limit) do |move|
-        fringes << []
-        fringes[move - 1].each do |hex|
-          neighbors(hex).each do |hex_neighbor|
-            key = coordinates_key(hex_neighbor)
-            next if visited_lookup.key?(key) || obstacle_lookup.key?(key)
+      out_qs = FFI::MemoryPointer.new(:int32, hexes.size)
+      out_rs = FFI::MemoryPointer.new(:int32, hexes.size)
 
-            visited_lookup[key] = true
-            visited << hex_neighbor
-            fringes[move] << hex_neighbor
-          end
-        end
-      end
+      count = Rhex::Native::Grid.reachable(
+        grid_qs,
+        grid_rs,
+        hexes.size,
+        start.q,
+        start.r,
+        movements_limit.to_i,
+        obstacles_qs,
+        obstacles_rs,
+        obstacles.size,
+        out_qs,
+        out_rs,
+        hexes.size
+      )
 
-      visited
+      coordinates_from_pointers(out_qs, out_rs, count).filter_map { |(q, r)| @hash[[q, r]] }
     end
 
     def field_of_view(source, obstacles = [])
       start = fetch(source) || raise(SourceHexNotInGrid)
-      cells = to_a - [start]
-      return cells if obstacles.empty?
+      hexes = to_a
+      grid_qs, grid_rs = coordinate_pointers(hexes)
+      obstacles_qs, obstacles_rs = coordinate_pointers(obstacles)
 
-      obstacle_lookup = lookup_by_coordinates(obstacles)
+      out_qs = FFI::MemoryPointer.new(:int32, hexes.size)
+      out_rs = FFI::MemoryPointer.new(:int32, hexes.size)
 
-      cells.filter_map do |hex|
-        is_blocked = start.linedraw(hex).any? { |point| obstacle_lookup.key?(coordinates_key(point)) }
-        hex unless is_blocked
-      end
+      count = Rhex::Native::Grid.field_of_view(
+        grid_qs,
+        grid_rs,
+        hexes.size,
+        start.q,
+        start.r,
+        obstacles_qs,
+        obstacles_rs,
+        obstacles.size,
+        out_qs,
+        out_rs,
+        hexes.size
+      )
+
+      coordinates_from_pointers(out_qs, out_rs, count).filter_map { |(q, r)| @hash[[q, r]] }
     end
 
     def bfs_path(source, target, obstacles: [])
@@ -139,8 +157,19 @@ module Rhex
 
     private
 
-    def lookup_by_coordinates(hexes)
-      hexes.each_with_object({}) { |hex, acc| acc[coordinates_key(hex)] = true }
+    def coordinate_pointers(hexes)
+      return [FFI::Pointer::NULL, FFI::Pointer::NULL] if hexes.empty?
+
+      [
+        FFI::MemoryPointer.new(:int32, hexes.size).put_array_of_int32(0, hexes.map(&:q)),
+        FFI::MemoryPointer.new(:int32, hexes.size).put_array_of_int32(0, hexes.map(&:r)),
+      ]
+    end
+
+    def coordinates_from_pointers(qs_pointer, rs_pointer, count)
+      return [] if count <= 0
+
+      qs_pointer.get_array_of_int32(0, count).zip(rs_pointer.get_array_of_int32(0, count))
     end
 
     def coordinates_key(hex)
