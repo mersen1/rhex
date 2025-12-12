@@ -22,7 +22,7 @@ def build_grid(range)
 end
 
 def ruby_reachable(grid, source, movements_limit, obstacles)
-  start = grid.fetch(source) || raise(Rhex::Grid::SourceHexNotInGrid)
+  start = grid.fetch(source) || raise(Rhex::Grid::GridDoesNotContainSourceError)
   obstacle_lookup = obstacles.each_with_object({}) { |hex, acc| acc[[hex.q, hex.r]] = true }
 
   fringes = [[start]]
@@ -47,7 +47,7 @@ def ruby_reachable(grid, source, movements_limit, obstacles)
 end
 
 def ruby_field_of_view(grid, source, obstacles)
-  start = grid.fetch(source) || raise(Rhex::Grid::SourceHexNotInGrid)
+  start = grid.fetch(source) || raise(Rhex::Grid::GridDoesNotContainSourceError)
   cells = grid.to_a - [start]
   return cells if obstacles.empty?
 

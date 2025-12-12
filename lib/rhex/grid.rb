@@ -4,10 +4,9 @@ module Rhex
   class Grid
     include Enumerable
 
-    SourceHexNotInGrid = Class.new(StandardError)
-    GridDoesNotContainSourceError = Class.new(StandardError)
-    GridDoesNotContainTargetError = Class.new(StandardError)
-    PathNotFoundError = Class.new(StandardError)
+    GridDoesNotContainSourceError = Class.new(StandardError) unless defined?(GridDoesNotContainSourceError)
+    GridDoesNotContainTargetError = Class.new(StandardError) unless defined?(GridDoesNotContainTargetError)
+    PathNotFoundError = Class.new(StandardError) unless defined?(PathNotFoundError)
 
     # @!method reachable(source, movements_limit = 1, obstacles: [])
     #   Reachability via native C extension.

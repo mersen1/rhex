@@ -83,14 +83,14 @@ static VALUE build_path_from_parents(VALUE grid_hash, VALUE parents, VALUE start
 
         VALUE hex = rb_hash_aref(grid_hash, array_key(q, r));
 
-        if (NIL_P(hex)) rb_raise(rb_ePathNotFoundError, "Path corrupted during reconstruction");
+        if (NIL_P(hex)) rb_raise(rb_ePathNotFoundError, "");
 
         rb_ary_push(path, hex);
 
         if (current_pk == start_pk) break;
 
         VALUE parent_pk = rb_hash_aref(parents, current_pk);
-        if (NIL_P(parent_pk)) rb_raise(rb_ePathNotFoundError, "Path broken during reconstruction");
+        if (NIL_P(parent_pk)) rb_raise(rb_ePathNotFoundError, "");
 
         current_pk = parent_pk;
     }
@@ -285,7 +285,7 @@ VALUE grid_field_of_view(int argc, VALUE *argv, VALUE self) {
     VALUE start_ary_key = array_key(start_q, start_r);
 
     if (NIL_P(rb_hash_aref(grid_hash, start_ary_key))) {
-        rb_raise(rb_eGridDoesNotContainSourceError, "Source not in grid");
+        rb_raise(rb_eGridDoesNotContainSourceError, "");
     }
     VALUE start_hex = rb_hash_aref(grid_hash, start_ary_key);
 
@@ -355,12 +355,12 @@ static VALUE run_pathfinding(VALUE self, int argc, VALUE *argv, int mode) {
     VALUE start_ary_key = array_key(start_q, start_r);
     VALUE start_hex = rb_hash_aref(grid_hash, start_ary_key);
     if (NIL_P(start_hex)) {
-        rb_raise(rb_eGridDoesNotContainSourceError, "Source hex not found in grid");
+        rb_raise(rb_eGridDoesNotContainSourceError, "");
     }
 
     VALUE target_ary_key = array_key(target_q, target_r);
     if (NIL_P(rb_hash_aref(grid_hash, target_ary_key))) {
-        rb_raise(rb_eGridDoesNotContainTargetError, "Target hex not found in grid");
+        rb_raise(rb_eGridDoesNotContainTargetError, "");
     }
 
     if (start_q == target_q && start_r == target_r) {
@@ -452,7 +452,7 @@ static VALUE run_pathfinding(VALUE self, int argc, VALUE *argv, int mode) {
         }
     }
 
-    rb_raise(rb_ePathNotFoundError, "Path not found");
+    rb_raise(rb_ePathNotFoundError, "");
     return Qnil;
 }
 

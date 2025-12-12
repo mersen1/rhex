@@ -54,6 +54,9 @@ jobs:
           ruby-version: 3.3.7
           bundler-cache: true
 
+      - name: Compile native extension
+        run: bundle exec rake compile
+
       - name: Run test suite
         run: bundle exec rspec
 
