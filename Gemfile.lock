@@ -4,7 +4,6 @@ PATH
     rhex (3.3.1)
       activesupport
       dry-validation
-      ffi
       rgl
       rmagick
       zeitwerk (~> 2.6)
@@ -72,7 +71,6 @@ GEM
       dry-initializer (~> 3.2)
       dry-schema (~> 1.14)
       zeitwerk (~> 2.6)
-    ffi (1.17.2)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
     logger (1.7.0)

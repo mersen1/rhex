@@ -227,7 +227,7 @@ RSpec.describe(Rhex::Grid) do
       hex_grid = grid(0) # contains only (0,0)
       source = Rhex::AxialHex.new(1, 0)
 
-      expect { hex_grid.reachable(source, 1) }.to(raise_error(Rhex::Grid::SourceHexNotInGrid))
+      expect { hex_grid.reachable(source, 1) }.to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
     end
   end
 
@@ -260,7 +260,7 @@ RSpec.describe(Rhex::Grid) do
       hex_grid = grid(0) # contains only (0,0)
       source = Rhex::AxialHex.new(1, 0)
 
-      expect { hex_grid.field_of_view(source) }.to(raise_error(Rhex::Grid::SourceHexNotInGrid))
+      expect { hex_grid.field_of_view(source) }.to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
     end
 
     it "returns all other cells when obstacles are empty" do

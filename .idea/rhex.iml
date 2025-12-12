@@ -34,7 +34,6 @@
     <orderEntry type="library" scope="PROVIDED" name="dry-schema (v1.14.1, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="dry-types (v1.8.3, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="dry-validation (v1.11.1, RVM: ruby-3.3.7) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="ffi (v1.17.2, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="i18n (v1.14.7, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="logger (v1.7.0, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="method_source (v1.0.0, RVM: ruby-3.3.7) [gem]" level="application" />

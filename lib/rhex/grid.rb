@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
-require "rhex/native/grid"
-
 module Rhex
   class Grid
     include Enumerable
 
     SourceHexNotInGrid = Class.new(StandardError)
+    GridDoesNotContainSourceError = Class.new(StandardError)
+    GridDoesNotContainTargetError = Class.new(StandardError)
+    PathNotFoundError = Class.new(StandardError)
 
     # @!method reachable(source, movements_limit = 1, obstacles: [])
     #   Reachability via native C extension.
@@ -14,6 +15,12 @@ module Rhex
     #   @param movements_limit [Integer] maximum steps
     #   @param obstacles [Array<Object>] blocked hexes
     #   @return [Array<Object>] reachable hexes including source
+
+    # @!method field_of_view(source, obstacles = [])
+    #   Visible cells via native C extension.
+    #   @param source [Object] starting hex
+    #   @param obstacles [Array<Object>] blocked hexes
+    #   @return [Array<Object>] hexes visible from source (source excluded)
 
     def self.[](*hexes)
       new(hexes)
@@ -95,32 +102,6 @@ module Rhex
       end
     end
 
-    def field_of_view(source, obstacles = [])
-      start = fetch(source) || raise(SourceHexNotInGrid)
-      hexes = to_a
-      grid_qs, grid_rs = coordinate_pointers(hexes)
-      obstacles_qs, obstacles_rs = coordinate_pointers(obstacles)
-
-      out_qs = FFI::MemoryPointer.new(:int32, hexes.size)
-      out_rs = FFI::MemoryPointer.new(:int32, hexes.size)
-
-      count = Rhex::Native::Grid.field_of_view(
-        grid_qs,
-        grid_rs,
-        hexes.size,
-        start.q,
-        start.r,
-        obstacles_qs,
-        obstacles_rs,
-        obstacles.size,
-        out_qs,
-        out_rs,
-        hexes.size
-      )
-
-      coordinates_from_pointers(out_qs, out_rs, count).filter_map { |(q, r)| @hash[[q, r]] }
-    end
-
     def bfs_path(source, target, obstacles: [])
       Rhex::BfsPath.new(self, obstacles: obstacles).call(source, target)
     end
@@ -135,21 +116,6 @@ module Rhex
     alias_method :[], :fetch
 
     private
-
-    def coordinate_pointers(hexes)
-      return [FFI::Pointer::NULL, FFI::Pointer::NULL] if hexes.empty?
-
-      [
-        FFI::MemoryPointer.new(:int32, hexes.size).put_array_of_int32(0, hexes.map(&:q)),
-        FFI::MemoryPointer.new(:int32, hexes.size).put_array_of_int32(0, hexes.map(&:r)),
-      ]
-    end
-
-    def coordinates_from_pointers(qs_pointer, rs_pointer, count)
-      return [] if count <= 0
-
-      qs_pointer.get_array_of_int32(0, count).zip(rs_pointer.get_array_of_int32(0, count))
-    end
 
     def key(hex)
       [hex.q, hex.r]

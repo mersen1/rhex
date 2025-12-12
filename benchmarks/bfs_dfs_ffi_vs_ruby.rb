@@ -22,9 +22,10 @@ def build_grid(range)
   grid
 end
 
-def sample_paths(grid, obstacle_ratio)
-  source = grid.to_a.sample
-  obstacles = grid.to_a.reject { |hex| hex == source }.sample((grid.size * obstacle_ratio).to_i)
+def sample_paths(grid, obstacle_ratio, random:)
+  cells = grid.to_a
+  source = cells.sample(random: random)
+  obstacles = cells.reject { |hex| hex == source }.sample((grid.size * obstacle_ratio).to_i, random: random)
 
   reachable = grid.reachable(source, grid.size, obstacles: obstacles) - [source]
   if reachable.empty?
@@ -32,7 +33,7 @@ def sample_paths(grid, obstacle_ratio)
     reachable = grid.reachable(source, grid.size, obstacles: obstacles) - [source]
   end
 
-  target = reachable.sample || source
+  target = reachable.sample(random: random) || source
   [source, target, obstacles]
 end
 
@@ -80,21 +81,24 @@ end
 
 range = Integer(ENV.fetch("RHEX_BENCH_RANGE", 8))
 obstacle_ratio = ENV.fetch("RHEX_BENCH_OBSTACLE_RATIO", "0.1").to_f
+seed = Integer(ENV.fetch("RHEX_BENCH_SEED", Random.new_seed))
+rng = Random.new(seed)
 
 grid = build_grid(range)
-source, target, obstacles = sample_paths(grid, obstacle_ratio)
+source, target, obstacles = sample_paths(grid, obstacle_ratio, random: rng)
 
+puts "Seed: #{seed}"
 puts "Grid size: #{grid.size}, obstacles: #{obstacles.size}"
 puts "Source: #{source.q},#{source.r} -> Target: #{target.q},#{target.r}"
 
 Benchmark.ips do |x|
-  x.report("ffi bfs_path") { grid.bfs_path(source, target, obstacles: obstacles) }
+  x.report("native bfs_path") { grid.bfs_path(source, target, obstacles: obstacles) }
   x.report("ruby bfs_path") { ruby_bfs_path(grid, source, target, obstacles) }
   x.compare!
 end
 
 Benchmark.ips do |x|
-  x.report("ffi dfs_path") { grid.dfs_path(source, target, obstacles: obstacles) }
+  x.report("native dfs_path") { grid.dfs_path(source, target, obstacles: obstacles) }
   x.report("ruby dfs_path") { ruby_dfs_path(grid, source, target, obstacles) }
   x.compare!
 end

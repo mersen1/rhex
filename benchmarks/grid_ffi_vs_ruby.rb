@@ -62,22 +62,26 @@ end
 range = Integer(ENV.fetch("RHEX_BENCH_RANGE", 6))
 moves = Integer(ENV.fetch("RHEX_BENCH_MOVES", 3))
 obstacle_ratio = ENV.fetch("RHEX_BENCH_OBSTACLE_RATIO", "0.1").to_f
+seed = Integer(ENV.fetch("RHEX_BENCH_SEED", Random.new_seed))
+rng = Random.new(seed)
 
 grid = build_grid(range)
-source = grid.to_a.sample
-obstacles = grid.to_a.reject { |hex| hex == source }.sample((grid.size * obstacle_ratio).to_i)
+cells = grid.to_a
+source = cells.sample(random: rng)
+obstacles = cells.reject { |hex| hex == source }.sample((grid.size * obstacle_ratio).to_i, random: rng)
 
+puts "Seed: #{seed}"
 puts "Grid size: #{grid.size}, moves: #{moves}, obstacles: #{obstacles.size}"
 puts "Source: #{source.q},#{source.r}"
 
 Benchmark.ips do |x|
-  x.report("ffi reachable") { grid.reachable(source, moves, obstacles: obstacles) }
+  x.report("native reachable") { grid.reachable(source, moves, obstacles: obstacles) }
   x.report("ruby reachable") { ruby_reachable(grid, source, moves, obstacles) }
   x.compare!
 end
 
 Benchmark.ips do |x|
-  x.report("ffi field_of_view") { grid.field_of_view(source, obstacles) }
+  x.report("native field_of_view") { grid.field_of_view(source, obstacles) }
   x.report("ruby field_of_view") { ruby_field_of_view(grid, source, obstacles) }
   x.compare!
 end
