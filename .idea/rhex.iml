@@ -47,6 +47,7 @@
     <orderEntry type="library" scope="PROVIDED" name="pry-byebug (v3.9.0, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="racc (v1.8.1, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rainbow (v3.1.1, RVM: ruby-3.3.7) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="rake (v13.3.1, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="regexp_parser (v2.5.0, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rexml (v3.2.5, RVM: ruby-3.3.7) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rgl (v0.6.6, RVM: ruby-3.3.7) [gem]" level="application" />

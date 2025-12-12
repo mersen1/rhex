@@ -28,5 +28,11 @@ Gem::Specification.new do |s|
   s.add_development_dependency("rubocop")
   s.add_development_dependency("rubocop-shopify")
   s.add_development_dependency("simplecov")
+  s.add_development_dependency("rake")
+
+  s.extensions = ["ext/rhex/extconf.rb"]
+
+  s.require_paths = ["lib", "ext"]
+
   s.metadata["rubygems_mfa_required"] = "true"
 end

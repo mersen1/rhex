@@ -8,6 +8,13 @@ module Rhex
 
     SourceHexNotInGrid = Class.new(StandardError)
 
+    # @!method reachable(source, movements_limit = 1, obstacles: [])
+    #   Reachability via native C extension.
+    #   @param source [Object] starting hex
+    #   @param movements_limit [Integer] maximum steps
+    #   @param obstacles [Array<Object>] blocked hexes
+    #   @return [Array<Object>] reachable hexes including source
+
     def self.[](*hexes)
       new(hexes)
     end
@@ -88,34 +95,6 @@ module Rhex
       end
     end
 
-    def reachable(source, movements_limit = 1, obstacles: [])
-      start = fetch(source) || raise(SourceHexNotInGrid)
-      hexes = to_a
-
-      grid_qs, grid_rs = coordinate_pointers(hexes)
-      obstacles_qs, obstacles_rs = coordinate_pointers(obstacles)
-
-      out_qs = FFI::MemoryPointer.new(:int32, hexes.size)
-      out_rs = FFI::MemoryPointer.new(:int32, hexes.size)
-
-      count = Rhex::Native::Grid.reachable(
-        grid_qs,
-        grid_rs,
-        hexes.size,
-        start.q,
-        start.r,
-        movements_limit.to_i,
-        obstacles_qs,
-        obstacles_rs,
-        obstacles.size,
-        out_qs,
-        out_rs,
-        hexes.size
-      )
-
-      coordinates_from_pointers(out_qs, out_rs, count).filter_map { |(q, r)| @hash[[q, r]] }
-    end
-
     def field_of_view(source, obstacles = [])
       start = fetch(source) || raise(SourceHexNotInGrid)
       hexes = to_a
@@ -172,12 +151,8 @@ module Rhex
       qs_pointer.get_array_of_int32(0, count).zip(rs_pointer.get_array_of_int32(0, count))
     end
 
-    def coordinates_key(hex)
-      [hex.q, hex.r]
-    end
-
     def key(hex)
-      coordinates_key(hex)
+      [hex.q, hex.r]
     end
   end
 end
@@ -187,3 +162,5 @@ module Enumerable
     klass.new(self, *args, **kwargs, &)
   end
 end
+
+require "rhex/rhex"
