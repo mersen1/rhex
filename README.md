@@ -268,20 +268,67 @@ grid.to_pic("with_configs")
 ```
 
 ## Benchmarks
-- Reachability and field of view (native C vs Ruby): `bundle exec ruby benchmarks/grid_ffi_vs_ruby.rb` (tune with `RHEX_BENCH_RANGE`, `RHEX_BENCH_MOVES`, `RHEX_BENCH_OBSTACLE_RATIO`).
-- BFS vs DFS, native C vs Ruby: `bundle exec ruby benchmarks/bfs_dfs_ffi_vs_ruby.rb` (defaults to `RHEX_BENCH_RANGE=8`, adjust `RHEX_BENCH_OBSTACLE_RATIO` as needed).
 
-### Sample results (Ruby 3.3.7 arm64-darwin24, `RHEX_BENCH_RANGE=8`, `RHEX_BENCH_OBSTACLE_RATIO=0.1`, `RHEX_BENCH_MOVES=3`)
+Performance comparisons between native C extensions and optimized Ruby implementations. The native extensions provide significant speedups, especially for computationally intensive operations like field of view calculations.
+
+### Running Benchmarks
+
+First, ensure the native extension is compiled:
+```shell
+bundle exec rake compile
 ```
-Grid size: 7651, obstacles: 765
-Source: 30,0 -> Target: 21,-15
-native bfs_path:   177.4 i/s  | ruby bfs_path:   33.8 i/s  (native faster ~5.3x)
-native dfs_path:     0.6 i/s  | ruby dfs_path:   12.5 i/s  (ruby faster ~20x)
 
-Grid size: 7651, moves: 3, obstacles: 765
-Source: -23,-1
-native reachable: 179.8 i/s  | ruby reachable: 999.3 i/s  (ruby faster ~5.6x)
-native field_of_view: 153.3 i/s | ruby field_of_view: 1.2 i/s (native faster ~125x)
+Then run the benchmarks:
+
+**Grid operations (reachable, field_of_view):**
+```shell
+ruby benchmarks/grid_native_vs_ruby.rb
+```
+
+**Pathfinding (BFS, DFS):**
+```shell
+ruby benchmarks/bfs_dfs_native_vs_ruby.rb
+```
+
+You can customize benchmark parameters via environment variables:
+- `RHEX_BENCH_RANGE` - Grid radius (default: 20 for grid ops, 30 for pathfinding)
+- `RHEX_BENCH_MOVES` - Movement limit for reachable (default: 3)
+- `RHEX_BENCH_OBSTACLE_RATIO` - Ratio of obstacles (default: 0.1 for grid ops, 0.2 for pathfinding)
+- `RHEX_BENCH_SEED` - Random seed for reproducibility
+
+### Example Results
+
+**Grid Operations:**
+```shell
+Building grid (Range: 20)...
+Seed: 279828578778449001641381329076603781011
+Grid size: 1261, moves: 3, obstacles: 126
+Source: -5,-3
+
+--- Reachable (BFS with Limit) ---
+    native reachable:      157.8 i/s
+      ruby reachable:       20.8 i/s - 7.57x  slower
+
+--- Field of View (Raycasting) ---
+          native fov:       21.7 i/s
+            ruby fov:        0.1 i/s - 157.50x  slower
+```
+
+**Pathfinding:**
+```shell
+Building grid (Range: 30)...
+Seed: 279828578778449001641381329076603781011
+Grid size: 2791, obstacles: 558
+Source: -10,5 -> Target: 8,-7
+Warming up Native Cache...
+
+--- Breadth-First Search (Shortest Path) ---
+          native bfs:       40.6 i/s
+            ruby bfs:       10.7 i/s - 3.78x  slower
+
+--- Depth-First Search (Any Path) ---
+          native dfs:       39.0 i/s
+            ruby dfs:       12.7 i/s - 3.06x  slower
 ```
 
 ## Testing
