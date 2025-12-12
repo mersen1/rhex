@@ -58,11 +58,6 @@ RSpec.describe(Rhex::DfsPath) do
         path_hexes = path.map { |hex| grid.fetch(hex) }
         path_hexes.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
 
-        expected_path =
-          coords_to_hexes([
-            [0, 0], [0, -1], [1, -2], [2, -2], [2, -1],
-          ])
-
         source_hex = grid.fetch(source)
         target_hex = grid.fetch(target)
         source_hex.image_config = Rhex::ImageConfigs.image_config_for(:source)

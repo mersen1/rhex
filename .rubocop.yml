@@ -9,3 +9,6 @@ Style/Documentation:
   Enabled: false
 Style/HashSyntax:
   Enabled: false
+Style/GlobalVars:
+  Exclude:
+    - "ext/**/*.rb"
