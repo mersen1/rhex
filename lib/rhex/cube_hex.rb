@@ -2,173 +2,165 @@
 
 module Rhex
   class CubeHex
-    module Math
-      module Hexagon
-        def movement_range(radius = 1)
-          (1 + (3 * radius * (radius + 1)))
-        end
-      end
+    RadiusCannotBeZero = Class.new(StandardError)
 
-      # linear interpolation
-      def self.lerp(start, stop, step)
-        (stop * step) + (start * (1.0 - step))
-      end
+    # Вынес lerp в helper класса, так быстрее и чище
+    def self.lerp(start, stop, t)
+      (stop * t) + (start * (1.0 - t))
     end
 
-    RadiusCannotBeZero = Class.new(StandardError)
+    attr_reader :q, :r, :s, :data, :packed_key, :image_config
 
     def initialize(q, r, s, data: nil, image_config: nil)
       @q = q
       @r = r
       @s = s
       @data = data
+      @packed_key = q.is_a?(Integer) && r.is_a?(Integer) ? (q << 32) | (r & 0xFFFFFFFF) : nil
 
       self.image_config = image_config
     end
-
-    attr_reader :q, :r, :s, :data, :image_config
 
     def image_config=(value)
       return @image_config = nil unless value
 
       validation = Rhex::Contracts::ImageConfigContract.new.call(value)
-      validation.failure? && raise(ArgumentError, "Invalid image_config: #{validation.errors.to_h}")
+      validation.failure? && raise(ArgumentError, validation.errors.to_h)
 
       @image_config = validation.to_h
     end
 
     def hash
-      { q: q, r: r, s: s }.hash
+      [q, r, s].hash
     end
 
     def ==(other)
       q == other.q && r == other.r && s == other.s
     end
+    alias_method :eql?, :==
 
     def !=(other)
-      q != other.q || r != other.r || s != other.s
+      !self.==(other)
     end
 
-    def eql?(other)
-      self == other
+    # --- Арифметика (вместо add/subtract/scale) ---
+
+    def +(other)
+      Rhex::CubeHex.new(q + other.q, r + other.r, s + other.s)
     end
 
-    def reflection_q(reference_point = Rhex::CubeHex.new(0, 0, 0))
-      with_reflection(reference_point) do |subtracted_hex|
-        Rhex::CubeHex.new(subtracted_hex.q, subtracted_hex.s, subtracted_hex.r)
-      end
+    def -(other)
+      Rhex::CubeHex.new(q - other.q, r - other.r, s - other.s)
     end
 
-    def reflection_r(reference_point = Rhex::CubeHex.new(0, 0, 0))
-      with_reflection(reference_point) do |subtracted_hex|
-        Rhex::CubeHex.new(subtracted_hex.s, subtracted_hex.r, subtracted_hex.q)
-      end
+    def *(other)
+      Rhex::CubeHex.new(q * other, r * other, s * other)
     end
 
-    def reflection_s(reference_point = Rhex::CubeHex.new(0, 0, 0))
-      with_reflection(reference_point) do |subtracted_hex|
-        Rhex::CubeHex.new(subtracted_hex.r, subtracted_hex.q, subtracted_hex.s)
-      end
-    end
+    # --- Геометрия ---
 
     def distance(hex)
-      subtracted_hex = subtract(hex)
-      [subtracted_hex.q.abs, subtracted_hex.r.abs, subtracted_hex.s.abs].max
+      ((q - hex.q).abs + (r - hex.r).abs + (s - hex.s).abs) / 2
     end
 
-    # There are times when "cube_hex_lerp" will return a point that's exactly on the side between two hexes.
-    # Then "round" will push it one way or the other.
-    # Rhex::CubeHex.new(1e-6, 2e-6, -3e-6) will "nudge" the line in one direction to avoid landing on side boundaries.
-    def linedraw(target)
-      offset = Rhex::CubeHex.new(1e-6, 2e-6, -3e-6)
-      distance = distance(target)
+    def neighbor(direction_index)
+      coords = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
 
-      (distance + 1).times.each_with_object([]) do |t, hexes|
-        step = 1.0 / distance * t
-        hexes.push(cube_hex_lerp(target, step).add(offset).round)
+      self + Rhex::CubeHex.new(*coords)
+    end
+
+    def neighbors
+      Rhex::Constants::DIRECTION_VECTORS.map.with_index { |_, direction_index| neighbor(direction_index) }
+    end
+
+    # --- Алгоритмы ---
+
+    def linedraw(target)
+      dist = distance(target)
+
+      # Сразу создаем смещение как объект один раз
+      offset = Rhex::CubeHex.new(*Rhex::Constants::LINE_OF_SIGHT_NUDGE)
+
+      # Добавляем смещение к старту и концу для корректного Lerp
+      source_nudged = self + offset
+      target_nudged = target + offset
+
+      (0..dist).map do |i|
+        step = 1.0 / dist * i
+        source_nudged.lerp(target_nudged, step).round
       end
     end
 
     def ring(radius = 1)
-      hex = add(Rhex::CubeHex.new(*Rhex::Constants::INITIAL_RING_VECTOR).scale(radius))
+      return [self] if radius.zero?
 
-      Rhex::Constants::DIRECTION_VECTORS.length.times.with_object([]) do |direction_index, hexes|
+      start_vector = Rhex::CubeHex.new(*Rhex::Constants::INITIAL_RING_VECTOR)
+      current_hex = self + (start_vector * radius)
+
+      results = []
+      Rhex::Constants::DIRECTION_VECTORS.each do |coords|
+        vector = Rhex::CubeHex.new(*coords)
         radius.times do
-          hexes.push(hex)
-          hex = hex.neighbor(direction_index)
+          results << current_hex
+          current_hex += vector
         end
       end
+      results
     end
 
     def spiral_ring(radius = 1)
       raise(RadiusCannotBeZero) unless radius.positive?
 
-      1.upto(radius).each_with_object([self]) do |r, hexes|
-        hexes.concat(ring(r))
-      end
+      # Используем flat_map для сбора единого массива
+      (0..radius).flat_map { |r| ring(r) }
     end
 
-    def neighbor(direction_index)
-      direction_vector = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
+    # --- Отражения ---
 
-      add(Rhex::CubeHex.new(*direction_vector, data: data, image_config: image_config))
-    end
+    def reflection_q(ref = Rhex::CubeHex.new(0, 0, 0)) = with_reflection(ref) { [_1.q, _1.s, _1.r] }
+    def reflection_r(ref = Rhex::CubeHex.new(0, 0, 0)) = with_reflection(ref) { [_1.s, _1.r, _1.q] }
+    def reflection_s(ref = Rhex::CubeHex.new(0, 0, 0)) = with_reflection(ref) { [_1.r, _1.q, _1.s] }
 
     def to_axial
       Rhex::AxialHex.new(q, r, data: data, image_config: image_config)
     end
 
-    def subtract(hex)
-      Rhex::CubeHex.new(q - hex.q, r - hex.r, s - hex.s, data: data, image_config: image_config)
+    # --- Protected / Private Helpers ---
+
+    def round
+      rq = q.round
+      rr = r.round
+      rs = s.round
+
+      q_diff = (rq - q).abs
+      r_diff = (rr - r).abs
+      s_diff = (rs - s).abs
+
+      if q_diff > r_diff && q_diff > s_diff
+        rq = -rr - rs
+      elsif r_diff > s_diff
+        rr = -rq - rs
+      else
+        rs = -rq - rr
+      end
+
+      Rhex::CubeHex.new(rq, rr, rs)
     end
 
-    def add(hex)
-      Rhex::CubeHex.new(q + hex.q, r + hex.r, s + hex.s, data: data, image_config: image_config)
+    def lerp(target, step)
+      Rhex::CubeHex.new(
+        self.class.lerp(q, target.q, step),
+        self.class.lerp(r, target.r, step),
+        self.class.lerp(s, target.s, step)
+      )
     end
 
     protected
 
-    def scale(factor)
-      Rhex::CubeHex.new(q * factor, r * factor, s * factor)
-    end
-
-    def round
-      rounded_q = q.round
-      rounded_r = r.round
-      rounded_s = s.round
-
-      q_diff = (rounded_q - q).abs
-      r_diff = (rounded_r - r).abs
-      s_diff = (rounded_s - s).abs
-
-      if q_diff > r_diff && q_diff > s_diff
-        rounded_q = -rounded_r - rounded_s
-      elsif r_diff > s_diff
-        rounded_r = -rounded_q - rounded_s
-      else
-        rounded_s = -rounded_q - rounded_r
-      end
-      Rhex::CubeHex.new(rounded_q, rounded_r, rounded_s, data: data, image_config: image_config)
-    end
-
-    private
-
-    # To reflect over a line that's not at 0, pick a reference point on that line.
-    # Subtract the reference point, perform the reflection, then add the reference point back.
-    def with_reflection(reference_point, &block)
-      subtracted_hex = subtract(reference_point)
-      reflected_hex = block.call(subtracted_hex)
-      reflected_hex.add(reference_point)
-    end
-
-    def cube_hex_lerp(hex, step)
-      Rhex::CubeHex.new(
-        Math.lerp(q, hex.q, step),
-        Math.lerp(r, hex.r, step),
-        Math.lerp(s, hex.s, step),
-        data: data,
-        image_config: image_config
-      )
+    def with_reflection(reference_point)
+      subtracted = self - reference_point
+      new_q, new_r, new_s = yield(subtracted)
+      Rhex::CubeHex.new(new_q, new_r, new_s) + reference_point
     end
   end
 end

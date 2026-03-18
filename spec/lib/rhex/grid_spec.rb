@@ -8,6 +8,7 @@ RSpec.describe(Rhex::Grid) do
 
   let(:hex_a) { Rhex::AxialHex.new(0, 0) }
   let(:hex_b) { Rhex::AxialHex.new(1, 0, data: :payload) }
+  let(:grid_algorithms) { Rhex::GridAlgorithms::INSTANCE }
 
   before do
     image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
@@ -29,6 +30,12 @@ RSpec.describe(Rhex::Grid) do
 
       expect(grid.add(hex_a)).to(be(grid))
       expect(grid.include?(Rhex::AxialHex.new(0, 0))).to(be(true))
+    end
+
+    it "raises when adding a non-hex object" do
+      grid = described_class.new
+
+      expect { grid.add("not a hex") }.to(raise_error(ArgumentError, /Only Rhex::CubeHex or Rhex::AxialHex/))
     end
 
     it "overwrites an existing coordinate with the latest hex" do
@@ -203,7 +210,8 @@ RSpec.describe(Rhex::Grid) do
         .merge([source])
       hex_grid.to_pic("reachable", orientation: Rhex::GridToPic::FLAT_TOPPED)
 
-      expect(hex_grid.reachable(source, 3, obstacles: obstacles)).to(contain_exactly(*expected_reachable))
+      expect(hex_grid.reachable(source, 3, obstacles: obstacles))
+        .to(contain_exactly(*expected_reachable))
     end
 
     it "includes the source hex in the reachable list" do
@@ -227,7 +235,8 @@ RSpec.describe(Rhex::Grid) do
       hex_grid = grid(0) # contains only (0,0)
       source = Rhex::AxialHex.new(1, 0)
 
-      expect { hex_grid.reachable(source, 1) }.to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
+      expect { hex_grid.reachable(source, 1) }
+        .to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
     end
   end
 
@@ -246,7 +255,7 @@ RSpec.describe(Rhex::Grid) do
         image_config: Rhex::ImageConfigs.image_config_for(:path)
       )
 
-      field_of_view = hex_grid.field_of_view(source, obstacles)
+      field_of_view = hex_grid.field_of_view(source, obstacles: obstacles)
 
       hex_grid.merge(obstacles)
         .merge(expect_field_of_view)
@@ -260,7 +269,8 @@ RSpec.describe(Rhex::Grid) do
       hex_grid = grid(0) # contains only (0,0)
       source = Rhex::AxialHex.new(1, 0)
 
-      expect { hex_grid.field_of_view(source) }.to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
+      expect { hex_grid.field_of_view(source) }
+        .to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
     end
 
     it "returns all other cells when obstacles are empty" do
@@ -276,7 +286,8 @@ RSpec.describe(Rhex::Grid) do
 
   describe "#bfs_path" do
     it "delegates to BfsPath" do
-      grid = described_class.new([hex_a])
+      ga = grid_algorithms
+      grid = described_class.new([hex_a], grid_algorithms: ga)
       target = instance_double(Rhex::AxialHex)
       obstacles = instance_double(Array)
 
@@ -284,7 +295,7 @@ RSpec.describe(Rhex::Grid) do
       bfs_path_instance = double
 
       expect(Rhex::BfsPath)
-        .to(receive(:new).with(grid, obstacles: obstacles).and_return(bfs_path_instance))
+        .to(receive(:new).with(grid, obstacles: obstacles, grid_algorithms: ga).and_return(bfs_path_instance))
       expect(bfs_path_instance).to(receive(:call).with(hex_a, target).and_return(shortest_path))
 
       expect(grid.bfs_path(hex_a, target, obstacles: obstacles)).to(eq(shortest_path))
@@ -293,7 +304,8 @@ RSpec.describe(Rhex::Grid) do
 
   describe "#dfs_path" do
     it "delegates to DfsPath" do
-      grid = described_class.new([hex_a])
+      ga = grid_algorithms
+      grid = described_class.new([hex_a], grid_algorithms: ga)
       target = instance_double(Rhex::AxialHex)
       obstacles = instance_double(Array)
 
@@ -301,7 +313,7 @@ RSpec.describe(Rhex::Grid) do
       dfs_path_instance = double
 
       expect(Rhex::DfsPath)
-        .to(receive(:new).with(grid, obstacles: obstacles).and_return(dfs_path_instance))
+        .to(receive(:new).with(grid, obstacles: obstacles, grid_algorithms: ga).and_return(dfs_path_instance))
       expect(dfs_path_instance).to(receive(:call).with(hex_a, target).and_return(path))
 
       expect(grid.dfs_path(hex_a, target, obstacles: obstacles)).to(eq(path))
@@ -319,6 +331,18 @@ RSpec.describe(Rhex::Grid) do
       grid = described_class.new([hex_a])
 
       expect(grid.fetch(Rhex::AxialHex.new(2, 2))).to(be_nil)
+    end
+
+    it "raises for an array with non-integer elements" do
+      grid = described_class.new([hex_a])
+
+      expect { grid.fetch(["a", "b"]) }.to(raise_error(ArgumentError, /Hex must be an array of 2 or 3 Integers/))
+    end
+
+    it "raises for an array of 3 integers that do not sum to zero" do
+      grid = described_class.new([hex_a])
+
+      expect { grid.fetch([1, 2, 3]) }.to(raise_error(ArgumentError, /Invalid cube coordinates/))
     end
   end
 end

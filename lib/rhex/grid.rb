@@ -2,30 +2,17 @@
 
 module Rhex
   class Grid
-    include Enumerable
-
-    GridDoesNotContainSourceError = Class.new(StandardError) unless defined?(GridDoesNotContainSourceError)
-    GridDoesNotContainTargetError = Class.new(StandardError) unless defined?(GridDoesNotContainTargetError)
-    PathNotFoundError = Class.new(StandardError) unless defined?(PathNotFoundError)
-
-    # @!method reachable(source, movements_limit = 1, obstacles: [])
-    #   Reachability via native C extension.
-    #   @param source [Object] starting hex
-    #   @param movements_limit [Integer] maximum steps
-    #   @param obstacles [Array<Object>] blocked hexes
-    #   @return [Array<Object>] reachable hexes including source
-
-    # @!method field_of_view(source, obstacles = [])
-    #   Visible cells via native C extension.
-    #   @param source [Object] starting hex
-    #   @param obstacles [Array<Object>] blocked hexes
-    #   @return [Array<Object>] hexes visible from source (source excluded)
+    GridDoesNotContainSourceError = Class.new(StandardError)
+    GridDoesNotContainTargetError = Class.new(StandardError)
+    PathNotFoundError = Class.new(StandardError)
+    HexNotFoundError = Class.new(StandardError)
 
     def self.[](*hexes)
       new(hexes)
     end
 
-    def initialize(hexes = nil)
+    def initialize(hexes = nil, grid_algorithms: GridAlgorithms::INSTANCE)
+      @grid_algorithms = grid_algorithms
       @hash = {}
 
       return if hexes.nil?
@@ -34,6 +21,13 @@ module Rhex
     end
 
     def add(hex)
+      unless hex.is_a?(Rhex::CubeHex) || hex.is_a?(Rhex::AxialHex)
+        raise(
+          ArgumentError,
+          "Only Rhex::CubeHex or Rhex::AxialHex instances can be added to the grid, got: #{hex.class}"
+        )
+      end
+
       @hash[key(hex)] = hex
       self
     end
@@ -88,25 +82,37 @@ module Rhex
     end
 
     def neighbor(hex, direction_index)
-      direction_vector = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
+      q, r, s = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
 
-      candidate = hex.add(Rhex::CubeHex.new(*direction_vector, data: hex.data, image_config: hex.image_config))
-      fetch(candidate)
+      hex = fetch(hex) || raise(HexNotFoundError)
+
+      fetch([
+        hex.q + q,
+        hex.r + r,
+        hex.s + s,
+      ])
     end
 
     def neighbors(hex)
-      Rhex::Constants::DIRECTION_VECTORS.length.times.each_with_object([]) do |direction_index, neighbors|
-        hex_neighbor = neighbor(hex, direction_index)
-        neighbors.push(hex_neighbor) if hex_neighbor
-      end
+      Rhex::Constants::DIRECTION_VECTORS
+        .map
+        .with_index { |_, direction_index| neighbor(hex, direction_index) }.compact
+    end
+
+    def reachable(source, movements_limit = 1, obstacles: [])
+      Reachable.new(self, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, movements_limit)
+    end
+
+    def field_of_view(source, obstacles: [])
+      FieldOfView.new(self, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source)
     end
 
     def bfs_path(source, target, obstacles: [])
-      Rhex::BfsPath.new(self, obstacles: obstacles).call(source, target)
+      BfsPath.new(self, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
     end
 
     def dfs_path(source, target, obstacles: [])
-      Rhex::DfsPath.new(self, obstacles: obstacles).call(source, target)
+      DfsPath.new(self, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
     end
 
     def fetch(hex)
@@ -117,7 +123,24 @@ module Rhex
     private
 
     def key(hex)
-      [hex.q, hex.r]
+      if hex.is_a?(Array)
+        # Validate that the array contains exactly 2 or 3 Integers
+        unless (2..3).cover?(hex.size) && hex.all? { |coord| coord.is_a?(Integer) }
+          raise(ArgumentError, "Hex must be an array of 2 or 3 Integers (e.g., [q, r]), got: #{hex.inspect}")
+        end
+
+        # Validate cubic coordinates property: q + r + s must equal 0
+        if hex.size == 3 && hex.sum != 0
+          raise(
+            ArgumentError,
+            "Invalid cube coordinates: sum of [q, r, s] must be 0, got: #{hex.inspect} (sum: #{hex.sum})"
+          )
+        end
+
+        return CoordinatePacker.pack(hex[0], hex[1])
+      end
+
+      hex.packed_key
     end
   end
 end
@@ -127,5 +150,3 @@ module Enumerable
     klass.new(self, *args, **kwargs, &)
   end
 end
-
-require "rhex/rhex"

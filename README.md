@@ -67,7 +67,7 @@ Rhex::Grid[origin].neighbor(origin, 0)  # => nil (missing from grid)
 ```
 
 ### reachable(source, movements_limit = 1, obstacles: []) -> Array<CubeHex>
-All cells inside the grid that are reachable within the given number of steps, always including the source. Any hexes listed in `obstacles` are excluded.
+All cells inside the grid that are reachable within the given number of steps, always including the source. Any hexes listed in `obstacles` are excluded. `grid_algorithms` is injected into the grid via `Grid.new(hexes, grid_algorithms:)` (defaults to `Rhex::GridAlgorithms::INSTANCE`).
 
 ![Reachable](images/reachable.png)
 ```ruby
@@ -77,7 +77,7 @@ obstacle = Rhex::AxialHex.new(1, 0)
 grid.reachable(start, 2, obstacles: [obstacle])
 ```
 
-### field_of_view(source, obstacles = []) -> Array<CubeHex>
+### field_of_view(source, obstacles: []) -> Array<CubeHex>
 All grid cells visible from `source` without intersecting obstacles. With empty `obstacles`, returns every cell except the source.
 
 ![Field of view](images/field_of_view.png)
@@ -85,7 +85,7 @@ All grid cells visible from `source` without intersecting obstacles. With empty 
 grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
 source = grid[Rhex::AxialHex.new(0, 0)]
 obstacles = [Rhex::AxialHex.new(1, 0)]
-grid.field_of_view(source, obstacles)
+grid.field_of_view(source, obstacles: obstacles)
 ```
 
 ### bfs_path(source, target, obstacles: []) -> Array<AxialHex>
@@ -267,69 +267,9 @@ grid   = [source].to_grid
 grid.to_pic("with_configs")
 ```
 
-## Benchmarks
+## Performance
 
-Performance comparisons between native C extensions and optimized Ruby implementations. The native extensions provide significant speedups, especially for computationally intensive operations like field of view calculations.
-
-### Running Benchmarks
-
-First, ensure the native extension is compiled:
-```shell
-bundle exec rake compile
-```
-
-Then run the benchmarks:
-
-**Grid operations (reachable, field_of_view):**
-```shell
-ruby benchmarks/grid_native_vs_ruby.rb
-```
-
-**Pathfinding (BFS, DFS):**
-```shell
-ruby benchmarks/bfs_dfs_native_vs_ruby.rb
-```
-
-You can customize benchmark parameters via environment variables:
-- `RHEX_BENCH_RANGE` - Grid radius (default: 20 for grid ops, 30 for pathfinding)
-- `RHEX_BENCH_MOVES` - Movement limit for reachable (default: 3)
-- `RHEX_BENCH_OBSTACLE_RATIO` - Ratio of obstacles (default: 0.1 for grid ops, 0.2 for pathfinding)
-- `RHEX_BENCH_SEED` - Random seed for reproducibility
-
-### Example Results
-
-**Grid Operations:**
-```shell
-Building grid (Range: 20)...
-Seed: 279828578778449001641381329076603781011
-Grid size: 1261, moves: 3, obstacles: 126
-Source: -5,-3
-
---- Reachable (BFS with Limit) ---
-    native reachable:      157.8 i/s
-      ruby reachable:       20.8 i/s - 7.57x  slower
-
---- Field of View (Raycasting) ---
-          native fov:       21.7 i/s
-            ruby fov:        0.1 i/s - 157.50x  slower
-```
-
-**Pathfinding:**
-```shell
-Building grid (Range: 30)...
-Seed: 279828578778449001641381329076603781011
-Grid size: 2791, obstacles: 558
-Source: -10,5 -> Target: 8,-7
-Warming up Native Cache...
-
---- Breadth-First Search (Shortest Path) ---
-          native bfs:       40.6 i/s
-            ruby bfs:       10.7 i/s - 3.78x  slower
-
---- Depth-First Search (Any Path) ---
-          native dfs:       39.0 i/s
-            ruby dfs:       12.7 i/s - 3.06x  slower
-```
+The gem is **pure Ruby** (no native extension). Pathfinding, FOV, and reachability use a `Rhex::GridAlgorithms` instance injected via `grid_algorithms:` on `Grid.new` or on `BfsPath` / `DfsPath` / `Reachable` / `FieldOfView` constructors directly. All default to a frozen singleton `Rhex::GridAlgorithms::INSTANCE`. Coordinate packing is handled by `Rhex::CoordinatePacker.pack(q, r)`. You can pass a custom `GridAlgorithms` implementation for testing or alternative algorithms.
 
 ## Testing
 The project uses RSpec with 100% coverage enforced by SimpleCov. Run the suite with:

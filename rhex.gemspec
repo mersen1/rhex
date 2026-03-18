@@ -20,7 +20,6 @@ Gem::Specification.new do |s|
   s.add_dependency("rmagick")
   s.add_dependency("zeitwerk", "~>2.6")
 
-  s.add_development_dependency("benchmark-ips")
   s.add_development_dependency("pry-byebug")
   s.add_development_dependency("racc")
   s.add_development_dependency("rake")
@@ -29,9 +28,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency("rubocop-shopify")
   s.add_development_dependency("simplecov")
 
-  s.extensions = ["ext/rhex/extconf.rb"]
-
-  s.require_paths = ["lib", "ext"]
+  s.require_paths = ["lib"]
 
   s.metadata["rubygems_mfa_required"] = "true"
 end

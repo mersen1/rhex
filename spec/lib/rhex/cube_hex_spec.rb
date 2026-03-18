@@ -100,7 +100,7 @@ RSpec.describe(Rhex::CubeHex) do
       expect(cube).not_to(eq(described_class.new(0, 0, 0)))
       expect(cube.eql?(cube)).to(be(true))
       expect(cube != described_class.new(0, -1, 1)).to(be(true))
-      expect(cube.hash).to(eq({ q: 1, r: -1, s: 0 }.hash))
+      expect(cube.hash).to(eq([1, -1, 0].hash))
     end
   end
 
@@ -134,6 +134,15 @@ RSpec.describe(Rhex::CubeHex) do
     end
   end
 
+  describe "#neighbors" do
+    it "returns all 6 neighbors" do
+      hex = described_class.new(0, 0, 0)
+
+      expect(hex.neighbors.length).to(eq(6))
+      expect(hex.neighbors).to(include(described_class.new(1, 0, -1)))
+    end
+  end
+
   describe "#spiral_ring" do
     it "raises when radius is zero" do
       hex = described_class.new(0, 0, 0)
@@ -159,22 +168,6 @@ RSpec.describe(Rhex::CubeHex) do
       hex = described_class.new(0.1, 0.2, -0.3)
 
       expect(hex.send(:round)).to(eq(described_class.new(0, 0, 0)))
-    end
-  end
-end
-
-RSpec.describe(Rhex::CubeHex::Math) do
-  describe ".lerp" do
-    it "interpolates between start and stop" do
-      expect(described_class.lerp(0, 10, 0.25)).to(eq(2.5))
-    end
-  end
-
-  describe Rhex::CubeHex::Math::Hexagon do
-    it "calculates movement range for a given radius" do
-      math = Class.new { include Rhex::CubeHex::Math::Hexagon }.new
-
-      expect(math.movement_range(2)).to(eq(19))
     end
   end
 end
