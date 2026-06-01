@@ -28,7 +28,7 @@ RSpec.describe(Rhex::Draw::Hexagon) do
       expect(gc).to(have_received(:polygon)) do |*args|
         expect(args.length).to(eq(12))
       end
-      expect(gc).to(have_received(:text).with(hex.coordinates.x, a_kind_of(Numeric), include("0, 0")))
+      expect(gc).to(have_received(:text).with(hex.coordinates.x, a_kind_of(Numeric), include("0,0")))
     end
 
     it "does not run the contract when using the cached default config" do

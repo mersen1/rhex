@@ -73,9 +73,10 @@ module Rhex
     def to_pic(
       filename,
       hex_size: Rhex::GridToPic::DEFAULT_HEX_SIZE,
-      orientation: Rhex::GridToPic::DEFAULT_ORIENTATION
+      orientation: Rhex::GridToPic::DEFAULT_ORIENTATION,
+      path: nil
     )
-      Rhex::GridToPic.new(self, hex_size: hex_size, orientation: orientation).call(filename)
+      Rhex::GridToPic.new(self, hex_size: hex_size, orientation: orientation, path: path).call(filename)
     end
 
     def to_grid(klass = Rhex::Grid, *args, **kwargs, &)

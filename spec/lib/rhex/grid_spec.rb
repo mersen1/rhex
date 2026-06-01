@@ -130,7 +130,7 @@ RSpec.describe(Rhex::Grid) do
       grid_to_pic = instance_double(Rhex::GridToPic, call: true)
       expect(Rhex::GridToPic)
         .to(receive(:new).with(grid, hex_size: Rhex::GridToPic::DEFAULT_HEX_SIZE,
-          orientation: Rhex::GridToPic::DEFAULT_ORIENTATION)
+          orientation: Rhex::GridToPic::DEFAULT_ORIENTATION, path: nil)
         .and_return(grid_to_pic))
 
       grid.to_pic("file")

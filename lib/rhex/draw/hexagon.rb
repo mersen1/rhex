@@ -71,7 +71,7 @@ module Rhex
 
         gc.text(
           coordinates.x, coordinates.y + (config[:font_size] / Math::PI),
-          "#{hex.q}, #{hex.r}"
+          "#{hex.q},#{hex.r}"
         )
       end
 

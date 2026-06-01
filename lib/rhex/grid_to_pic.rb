@@ -17,11 +17,12 @@ module Rhex
     DEFAULT_ORIENTATION = FLAT_TOPPED
     DEFAULT_HEX_SIZE = 64
 
-    def initialize(grid, hex_size: DEFAULT_HEX_SIZE, orientation: DEFAULT_ORIENTATION)
+    def initialize(grid, hex_size: DEFAULT_HEX_SIZE, orientation: DEFAULT_ORIENTATION, path: nil)
       oriented_grid_class = Object.const_get(ORIENTED_GRIDS_MAPPER.fetch(orientation))
       oriented_grid = grid.to_grid(oriented_grid_class, hex_size: hex_size)
 
       @grid = oriented_grid
+      @path = path
       @canvas_markup = Rhex::CanvasMarkups::AutoCanvasMarkup.new(oriented_grid)
     end
 
@@ -30,12 +31,23 @@ module Rhex
 
       grid.each { |hex| Draw::Hexagon.new(gc: gc, hex: hex).call }
 
+      draw_path_arrows
+
       draw_and_save(filename)
     end
 
     private
 
-    attr_reader :grid, :canvas_markup
+    attr_reader :grid, :path, :canvas_markup
+
+    def draw_path_arrows
+      return if path.nil?
+
+      oriented_path = path.filter_map { |hex| grid.fetch(hex) }
+      oriented_path.each_cons(2) do |from, to|
+        Draw::Arrow.new(gc: gc, from: from, to: to).call
+      end
+    end
 
     def_delegators :canvas_markup, :center
     def_delegators :canvas_markup, :cols

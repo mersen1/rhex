@@ -19,6 +19,8 @@ RSpec.describe(Rhex::GridToPic) do
         :"font=" => nil,
         font_size: nil,
         text: nil,
+        line: nil,
+        stroke_width: nil,
         draw: nil
       )
     end
@@ -39,6 +41,15 @@ RSpec.describe(Rhex::GridToPic) do
       expect(imgl).to(receive(:write).with(Rhex.root.join("images", "example.png").to_s))
 
       described_class.new(hex_grid, hex_size: 2).call("example")
+    end
+
+    it "draws direction arrows along the given path" do
+      hex_grid = grid(1)
+      path = [Rhex::AxialHex.new(0, 0), Rhex::AxialHex.new(1, 0)]
+
+      expect(gc).to(receive(:line).at_least(:once))
+
+      described_class.new(hex_grid, hex_size: 2, path: path).call("example")
     end
 
     it "raises on invalid filename" do

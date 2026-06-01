@@ -244,6 +244,11 @@ path = grid.bfs_path(source, target, obstacles: obstacles)
   - Builds an oriented grid (`:flat_topped` by default) and centers it automatically using `CanvasMarkups::AutoCanvasMarkup`.
   - Draws each hex through `Rhex::Draw::Hexagon`, labeling it with its `q, r` coordinates.
   - Saves the image to `images/filename.png` inside the gem/project root.
+- Pass an ordered list of hexes via `path:` to draw a direction arrow on each hex pointing towards the next one in the path (drawn through `Rhex::Draw::Arrow`):
+```ruby
+path = grid.bfs_path(source, target)
+grid.to_pic("bfs_path", orientation: :pointy_topped, path: path)
+```
 - Default colors come from `Rhex::Draw::Hexagon::DEFAULT_IMAGE_CONFIG`. You can override per hex:
 ```ruby
 config = Rhex::Draw::Hexagon::ImageConfig.new(

@@ -39,7 +39,8 @@ RSpec.describe(Rhex::DfsPath) do
       source_hex.image_config = Rhex::ImageConfigs.image_config_for(:source)
       target_hex.image_config = Rhex::ImageConfigs.image_config_for(:target)
 
-      grid.merge(dfs_path_hexes).merge([source_hex, target_hex]).to_pic("dfs_path", orientation: :pointy_topped)
+      grid.merge(dfs_path_hexes).merge([source_hex, target_hex])
+        .to_pic("dfs_path", orientation: :pointy_topped, path: dfs_path_hexes)
     end
 
     context "when obstacles are defined" do
@@ -70,7 +71,7 @@ RSpec.describe(Rhex::DfsPath) do
         grid.merge(obstacles)
           .merge(path_hexes)
           .merge([source_hex, target_hex])
-          .to_pic("dfs_path_obstacles", orientation: :pointy_topped)
+          .to_pic("dfs_path_obstacles", orientation: :pointy_topped, path: path_hexes)
 
         expect(path.first).to(eq(source))
         expect(path.last).to(eq(target))

@@ -41,7 +41,7 @@ RSpec.describe(Rhex::AstarPath) do
         target.image_config = Rhex::ImageConfigs.image_config_for(:target)
 
         grid.merge([obstacle]).merge(path_hexes).merge([source, target])
-          .to_pic("astar_path", orientation: :pointy_topped)
+          .to_pic("astar_path", orientation: :pointy_topped, path: path_hexes)
       end
     end
 

@@ -35,7 +35,7 @@ RSpec.describe(Rhex::BfsPath) do
 
       grid.merge(path_hexes)
         .merge([source_hex, target_hex])
-        .to_pic("bfs_path", orientation: :pointy_topped)
+        .to_pic("bfs_path", orientation: :pointy_topped, path: path_hexes)
     end
 
     context "when obstacles are defined" do
@@ -71,7 +71,7 @@ RSpec.describe(Rhex::BfsPath) do
         grid.merge(obstacles)
           .merge(path_hexes)
           .merge([source_hex, target_hex])
-          .to_pic("bfs_path_obstacles", orientation: :pointy_topped)
+          .to_pic("bfs_path_obstacles", orientation: :pointy_topped, path: path_hexes)
 
         expect(shortest_path.first).to(eq(source))
         expect(shortest_path.last).to(eq(target))
