@@ -2,14 +2,13 @@
 
 module Rhex
   class FieldOfView
-    def initialize(grid, obstacles: [], grid_algorithms: GridAlgorithms::INSTANCE)
-      @grid = grid
+    def initialize(grid_hash, obstacles: [], grid_algorithms: GridAlgorithms::INSTANCE)
+      @grid_hash = grid_hash
       @obstacles = obstacles
       @grid_algorithms = grid_algorithms
     end
 
     def call(source)
-      grid_hash = grid.instance_variable_get(:@hash)
       ga = grid_algorithms
 
       start_packed_key = CoordinatePacker.pack(source.q, source.r)
@@ -27,6 +26,6 @@ module Rhex
 
     private
 
-    attr_reader :grid, :obstacles, :grid_algorithms
+    attr_reader :grid_hash, :obstacles, :grid_algorithms
   end
 end

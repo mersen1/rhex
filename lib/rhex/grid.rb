@@ -13,6 +13,7 @@ module Rhex
 
     def initialize(hexes = nil, grid_algorithms: GridAlgorithms::INSTANCE)
       @grid_algorithms = grid_algorithms
+      @mutex = Mutex.new
       @hash = {}
 
       return if hexes.nil?
@@ -21,14 +22,14 @@ module Rhex
     end
 
     def add(hex)
-      unless hex.is_a?(Rhex::CubeHex) || hex.is_a?(Rhex::AxialHex)
+      unless hex.is_a?(Rhex::CubeHex)
         raise(
           ArgumentError,
           "Only Rhex::CubeHex or Rhex::AxialHex instances can be added to the grid, got: #{hex.class}"
         )
       end
 
-      @hash[key(hex)] = hex
+      @mutex.synchronize { @hash[key(hex)] = hex }
       self
     end
     alias_method :<<, :add
@@ -41,10 +42,12 @@ module Rhex
     end
 
     def merge(other)
-      if other.instance_of?(self.class)
-        @hash.update(other.instance_variable_get(:@hash))
-      else
-        other.each { |hex| add(hex) }
+      @mutex.synchronize do
+        if other.instance_of?(self.class)
+          @hash.update(other.send(:grid_hash))
+        else
+          other.each { |hex| @hash[key(hex)] = hex }
+        end
       end
 
       self
@@ -100,25 +103,38 @@ module Rhex
     end
 
     def reachable(source, movements_limit = 1, obstacles: [])
-      Reachable.new(self, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, movements_limit)
+      snapshot = @mutex.synchronize { @hash.dup }
+      Reachable.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, movements_limit)
     end
 
     def field_of_view(source, obstacles: [])
-      FieldOfView.new(self, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source)
+      snapshot = @mutex.synchronize { @hash.dup }
+      FieldOfView.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source)
     end
 
     def bfs_path(source, target, obstacles: [])
-      BfsPath.new(self, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
+      snapshot = @mutex.synchronize { @hash.dup }
+      BfsPath.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
     end
 
     def dfs_path(source, target, obstacles: [])
-      DfsPath.new(self, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
+      snapshot = @mutex.synchronize { @hash.dup }
+      DfsPath.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
+    end
+
+    def astar_path(source, target, obstacles: [])
+      snapshot = @mutex.synchronize { @hash.dup }
+      AstarPath.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
     end
 
     def fetch(hex)
       @hash[key(hex)]
     end
     alias_method :[], :fetch
+
+    protected
+
+    def grid_hash = @hash
 
     private
 

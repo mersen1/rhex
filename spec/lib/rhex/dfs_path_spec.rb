@@ -14,8 +14,8 @@ RSpec.describe(Rhex::DfsPath) do
       source = Rhex::AxialHex.new(0, 3)
       target = Rhex::AxialHex.new(0, -3)
 
-      dfs_path = described_class.new(grid, grid_algorithms: grid_algorithms).call(source, target)
-      bfs_path = Rhex::BfsPath.new(grid, grid_algorithms: grid_algorithms).call(source, target)
+      dfs_path = described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target)
+      bfs_path = Rhex::BfsPath.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target)
 
       expected_bfs_path =
         coords_to_hexes([[0, 3], [0, 2], [0, 1], [0, 0], [0, -1], [0, -2], [0, -3]])
@@ -54,7 +54,9 @@ RSpec.describe(Rhex::DfsPath) do
         target = Rhex::AxialHex.new(2, -1)
         obstacles = coords_to_hexes([[1, 0], [1, -1]], image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
 
-        path = described_class.new(grid, obstacles: obstacles, grid_algorithms: grid_algorithms).call(source, target)
+        path = described_class.new(grid_hash(grid), obstacles: obstacles, grid_algorithms: grid_algorithms).call(
+          source, target
+        )
 
         # Use hexes from grid to ensure we have the correct objects
         path_hexes = path.map { |hex| grid.fetch(hex) }
@@ -82,7 +84,8 @@ RSpec.describe(Rhex::DfsPath) do
       grid = grid(1)
       source = Rhex::AxialHex.new(0, 0)
 
-      expect(described_class.new(grid, grid_algorithms: grid_algorithms).call(source, source)).to(eq([source]))
+      expect(described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source,
+        source)).to(eq([source]))
     end
 
     it "returns grid-stored hex instances in the path" do
@@ -90,7 +93,7 @@ RSpec.describe(Rhex::DfsPath) do
       source = grid.fetch(Rhex::AxialHex.new(0, 0))
       target = grid.fetch(Rhex::AxialHex.new(1, 1))
 
-      path = described_class.new(grid, grid_algorithms: grid_algorithms).call(source, target)
+      path = described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target)
 
       expect(path.first).to(be(source))
       expect(path.last).to(be(target))
@@ -102,7 +105,7 @@ RSpec.describe(Rhex::DfsPath) do
       target = Rhex::AxialHex.new(3, 0)
       grid = Rhex::Grid.new([source, target])
 
-      expect { described_class.new(grid, grid_algorithms: grid_algorithms).call(source, target) }
+      expect { described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target) }
         .to(raise_error(Rhex::Grid::PathNotFoundError))
     end
 
@@ -111,7 +114,7 @@ RSpec.describe(Rhex::DfsPath) do
       source = Rhex::AxialHex.new(1, 0)
       target = Rhex::AxialHex.new(0, 0)
 
-      expect { described_class.new(grid, grid_algorithms: grid_algorithms).call(source, target) }
+      expect { described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target) }
         .to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
     end
 
@@ -120,7 +123,7 @@ RSpec.describe(Rhex::DfsPath) do
       source = Rhex::AxialHex.new(0, 0)
       target = Rhex::AxialHex.new(1, 0)
 
-      expect { described_class.new(grid, grid_algorithms: grid_algorithms).call(source, target) }
+      expect { described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target) }
         .to(raise_error(Rhex::Grid::GridDoesNotContainTargetError))
     end
   end

@@ -6,21 +6,20 @@ module Rhex
       extend Forwardable
 
       Center = Struct.new(:x, :y, keyword_init: true)
-      DEG_TO_RAD = Math::PI / 180.0
       STROKE_WIDTH = 1
-      private_constant :Center, :DEG_TO_RAD, :STROKE_WIDTH
+      private_constant :Center, :STROKE_WIDTH
 
       def initialize(grid)
         @grid = Rhex::Decorators::GridWithMarkup.new(grid)
       end
 
       def width
-        @width ||= span_with_stroke(x_max - x_min)
+        @width ||= span_with_stroke(bounding_box[:x_max] - bounding_box[:x_min])
       end
       alias_method :cols, :width
 
       def height
-        @height ||= span_with_stroke(y_max - y_min)
+        @height ||= span_with_stroke(bounding_box[:y_max] - bounding_box[:y_min])
       end
       alias_method :rows, :height
 
@@ -44,34 +43,29 @@ module Rhex
         )
       end
 
-      def x_min
-        @x_min ||= vertices.map(&:first).min
-      end
+      def bounding_box
+        @bounding_box ||= begin
+          x_min = Float::INFINITY
+          x_max = -Float::INFINITY
+          y_min = Float::INFINITY
+          y_max = -Float::INFINITY
 
-      def x_max
-        @x_max ||= vertices.map(&:first).max
-      end
+          grid.to_a.each do |hex|
+            half_width = hex.width / 2.0
+            half_height = hex.height / 2.0
 
-      def y_min
-        @y_min ||= vertices.map(&:last).min
-      end
+            xlo = hex.coordinates.x - half_width
+            xhi = hex.coordinates.x + half_width
+            ylo = hex.coordinates.y - half_height
+            yhi = hex.coordinates.y + half_height
 
-      def y_max
-        @y_max ||= vertices.map(&:last).max
-      end
+            x_min = xlo if xlo < x_min
+            x_max = xhi if xhi > x_max
+            y_min = ylo if ylo < y_min
+            y_max = yhi if yhi > y_max
+          end
 
-      def vertices
-        @vertices ||= grid.to_a.flat_map { polygon_vertices(_1) }
-      end
-
-      def polygon_vertices(hex)
-        hex.class::ANGLES.map do |deg|
-          rad = deg * DEG_TO_RAD
-
-          [
-            hex.coordinates.x + (hex.size * Math.cos(rad)),
-            hex.coordinates.y + (hex.size * Math.sin(rad)),
-          ]
+          { x_min: x_min, x_max: x_max, y_min: y_min, y_max: y_max }
         end
       end
 
@@ -80,19 +74,19 @@ module Rhex
       end
 
       def x_min_with_stroke
-        x_min - STROKE_WIDTH / 2.0
+        bounding_box[:x_min] - STROKE_WIDTH / 2.0
       end
 
       def x_max_with_stroke
-        x_max + STROKE_WIDTH / 2.0
+        bounding_box[:x_max] + STROKE_WIDTH / 2.0
       end
 
       def y_min_with_stroke
-        y_min - STROKE_WIDTH / 2.0
+        bounding_box[:y_min] - STROKE_WIDTH / 2.0
       end
 
       def y_max_with_stroke
-        y_max + STROKE_WIDTH / 2.0
+        bounding_box[:y_max] + STROKE_WIDTH / 2.0
       end
     end
   end

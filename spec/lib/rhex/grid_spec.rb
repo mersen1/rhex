@@ -295,7 +295,8 @@ RSpec.describe(Rhex::Grid) do
       bfs_path_instance = double
 
       expect(Rhex::BfsPath)
-        .to(receive(:new).with(grid, obstacles: obstacles, grid_algorithms: ga).and_return(bfs_path_instance))
+        .to(receive(:new).with(grid_hash(grid), obstacles: obstacles,
+          grid_algorithms: ga).and_return(bfs_path_instance))
       expect(bfs_path_instance).to(receive(:call).with(hex_a, target).and_return(shortest_path))
 
       expect(grid.bfs_path(hex_a, target, obstacles: obstacles)).to(eq(shortest_path))
@@ -313,7 +314,8 @@ RSpec.describe(Rhex::Grid) do
       dfs_path_instance = double
 
       expect(Rhex::DfsPath)
-        .to(receive(:new).with(grid, obstacles: obstacles, grid_algorithms: ga).and_return(dfs_path_instance))
+        .to(receive(:new).with(grid_hash(grid), obstacles: obstacles,
+          grid_algorithms: ga).and_return(dfs_path_instance))
       expect(dfs_path_instance).to(receive(:call).with(hex_a, target).and_return(path))
 
       expect(grid.dfs_path(hex_a, target, obstacles: obstacles)).to(eq(path))

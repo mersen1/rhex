@@ -2,21 +2,8 @@
 
 module Rhex
   module Decorators
-    class PointyToppedHex < SimpleDelegator
-      Coordinates = Struct.new(:x, :y, keyword_init: true)
-
+    class PointyToppedHex < BaseOrientedHex
       ANGLES = [30, 90, 150, 210, 270, 330].freeze
-
-      def initialize(obj, size:)
-        super(obj)
-        @size = size
-      end
-
-      attr_reader :size
-
-      def coordinates
-        @coordinates ||= Coordinates.new(x: coordinate_x, y: coordinate_y)
-      end
 
       def height
         Math.sqrt(3) * radius
@@ -24,10 +11,6 @@ module Rhex
 
       def width
         (3.0 / 2.0) * radius
-      end
-
-      def radius
-        (2.0 / Math.sqrt(3)) * size
       end
 
       private

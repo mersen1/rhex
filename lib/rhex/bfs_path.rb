@@ -2,14 +2,13 @@
 
 module Rhex
   class BfsPath
-    def initialize(grid, obstacles: [], grid_algorithms: GridAlgorithms::INSTANCE)
-      @grid = grid
+    def initialize(grid_hash, obstacles: [], grid_algorithms: GridAlgorithms::INSTANCE)
+      @grid_hash = grid_hash
       @obstacles = obstacles
       @grid_algorithms = grid_algorithms
     end
 
     def call(source, target)
-      grid_hash = grid.instance_variable_get(:@hash)
       ga = grid_algorithms
 
       start_q = source.q
@@ -78,7 +77,7 @@ module Rhex
 
     private
 
-    attr_reader :grid, :obstacles, :grid_algorithms
+    attr_reader :grid_hash, :obstacles, :grid_algorithms
 
     def cross_product(start_qr, target_qr, neighbor_qr)
       sq, sr = start_qr

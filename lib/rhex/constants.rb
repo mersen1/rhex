@@ -17,5 +17,8 @@ module Rhex
 
     # Tiny offset for hex line-of-sight / linedraw (avoids ambiguous rounding on edges).
     LINE_OF_SIGHT_NUDGE = [1e-6, 2e-6, -3e-6].freeze
+
+    # Degrees-to-radians factor, shared by drawing/markup code.
+    DEG_TO_RAD = (Math::PI / 180.0)
   end
 end

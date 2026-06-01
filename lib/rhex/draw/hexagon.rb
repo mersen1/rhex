@@ -6,7 +6,6 @@ module Rhex
       extend Forwardable
 
       Coordinates = Struct.new(:x, :y, keyword_init: true)
-      DEG_TO_RAD = Math::PI / 180.0
       DEFAULT_IMAGE_CONFIG = {
         hexagon: {
           color: "#F4F4F1",
@@ -19,16 +18,28 @@ module Rhex
           font_size: 32,
         },
       }.freeze
-      private_constant :Coordinates, :DEG_TO_RAD, :DEFAULT_IMAGE_CONFIG
+      private_constant :Coordinates, :DEFAULT_IMAGE_CONFIG
 
-      def initialize(gc:, hex:, default_image_config: DEFAULT_IMAGE_CONFIG)
+      VALIDATED_DEFAULT_IMAGE_CONFIG = begin
+        result = Rhex::Contracts::ImageConfigContract.new.call(DEFAULT_IMAGE_CONFIG)
+        raise(ArgumentError, "Invalid DEFAULT_IMAGE_CONFIG: #{result.errors.to_h}") if result.failure?
+
+        result.to_h.freeze
+      end
+      private_constant :VALIDATED_DEFAULT_IMAGE_CONFIG
+
+      def initialize(gc:, hex:, default_image_config: VALIDATED_DEFAULT_IMAGE_CONFIG)
         @gc = gc
         @hex = hex
+        @default_image_config =
+          if default_image_config.equal?(VALIDATED_DEFAULT_IMAGE_CONFIG)
+            default_image_config
+          else
+            validation = Rhex::Contracts::ImageConfigContract.new.call(default_image_config)
+            validation.failure? && raise(ArgumentError, "Invalid image_config: #{validation.errors.to_h}")
 
-        validation = Rhex::Contracts::ImageConfigContract.new.call(default_image_config)
-        validation.failure? && raise(ArgumentError, "Invalid image_config: #{validation.errors.to_h}")
-
-        @default_image_config = validation.to_h
+            validation.to_h
+          end
       end
 
       def call
@@ -66,7 +77,7 @@ module Rhex
 
       def polygon_coordinates
         @polygon_coordinates ||= begin
-          angles_in_radians = hex.class::ANGLES.map { |angle| angle * DEG_TO_RAD }
+          angles_in_radians = hex.class::ANGLES.map { |angle| angle * Rhex::Constants::DEG_TO_RAD }
 
           angles_in_radians.flat_map do |angle_rad|
             [

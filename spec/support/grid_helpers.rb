@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 module GridHelpers
+  # Builds the packed_key => hex Hash that algorithm classes consume,
+  # using only the grid's public interface.
+  def grid_hash(grid)
+    grid.to_a.to_h { |hex| [hex.packed_key, hex] }
+  end
+
   def grid(range)
     grid = Rhex::Grid.new
 

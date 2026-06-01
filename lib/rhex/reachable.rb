@@ -2,14 +2,13 @@
 
 module Rhex
   class Reachable
-    def initialize(grid, obstacles: [], grid_algorithms: GridAlgorithms::INSTANCE)
-      @grid = grid
+    def initialize(grid_hash, obstacles: [], grid_algorithms: GridAlgorithms::INSTANCE)
+      @grid_hash = grid_hash
       @obstacles = obstacles
       @grid_algorithms = grid_algorithms
     end
 
     def call(source, movements_limit = 1)
-      grid_hash = grid.instance_variable_get(:@hash)
       ga = grid_algorithms
 
       start_packed_key = CoordinatePacker.pack(source.q, source.r)
@@ -19,7 +18,6 @@ module Rhex
       movements_limit = 0 if movements_limit < 0
 
       obstacle_set = ga.obstacle_packed_key_set(obstacles)
-      visited = { start_packed_key => true }
       distance_map = { start_packed_key => 0 }
       result = [start_hex]
       queue = [start_hex]
@@ -38,12 +36,11 @@ module Rhex
         Constants::AXIAL_NEIGHBOR_DELTAS.each do |dq, dr|
           neighbor_packed_key = CoordinatePacker.pack(current.q + dq, current.r + dr)
 
-          next if obstacle_set.key?(neighbor_packed_key) || visited.key?(neighbor_packed_key)
+          next if obstacle_set.key?(neighbor_packed_key) || distance_map.key?(neighbor_packed_key)
 
           n_hex = grid_hash[neighbor_packed_key]
           next unless n_hex
 
-          visited[neighbor_packed_key] = true
           distance_map[neighbor_packed_key] = next_dist
           result << n_hex
           queue << n_hex
@@ -55,6 +52,6 @@ module Rhex
 
     private
 
-    attr_reader :grid, :obstacles, :grid_algorithms
+    attr_reader :grid_hash, :obstacles, :grid_algorithms
   end
 end

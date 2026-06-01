@@ -110,6 +110,17 @@ dst  = Rhex::AxialHex.new(2, -1)
 grid.dfs_path(src, dst, obstacles: [Rhex::AxialHex.new(1, 0)])
 ```
 
+### astar_path(source, target, obstacles: []) -> Array<AxialHex>
+Shortest path using A\* search with a hex-distance heuristic and a binary min-heap. Returns the same length as `bfs_path` but explores fewer cells on large grids. Validation, obstacle handling, and the `Grid::PathNotFoundError` / `GridDoesNotContain*Error` semantics match `bfs_path`.
+
+![A* shortest path](images/astar_path.png)
+```ruby
+grid = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
+src  = grid[Rhex::AxialHex.new(0, 0)]
+dst  = Rhex::AxialHex.new(2, -1)
+grid.astar_path(src, dst, obstacles: [Rhex::AxialHex.new(1, 0)])
+```
+
 ## Hex methods
 Hex methods operate on individual coordinates and small derived collections.
 
@@ -247,7 +258,7 @@ hex = Rhex::AxialHex.new(0, 0, image_config: config)
 Rhex ships with a bundled Inconsolata font (`fonts/Inconsolata-Regular.ttf`) and always uses it when rendering text. Custom fonts are intentionally not supported; attempting to set a custom font path raises an error.
 
 ## Image configuration files
-`Rhex::ImageConfigs.load!(path)` reads every `*_config.yml` in the given directory and defines readers named after each file (e.g., `path_image_config`). Each YAML entry is exposed as an `OpenStruct`, so keys like `hexagon.color`, `hexagon.stroke_color`, and `text.font_size` can be read by the renderer.
+`Rhex::ImageConfigs.load!(path)` reads every `*_config.yml` in the given directory and stores each one under a normalized key (e.g., `:path` for `path_image_config.yml`). Look configs up with `Rhex::ImageConfigs.image_config_for(:path)`. Each config is a symbol-keyed `Hash`, so the renderer reads nested keys like `config[:hexagon][:color]`, `config[:hexagon][:stroke_color]`, and `config[:text][:font_size]`.
 
 Example YAML (`path_image_config.yml`):
 ```yaml
@@ -269,7 +280,7 @@ grid.to_pic("with_configs")
 
 ## Performance
 
-The gem is **pure Ruby** (no native extension). Pathfinding, FOV, and reachability use a `Rhex::GridAlgorithms` instance injected via `grid_algorithms:` on `Grid.new` or on `BfsPath` / `DfsPath` / `Reachable` / `FieldOfView` constructors directly. All default to a frozen singleton `Rhex::GridAlgorithms::INSTANCE`. Coordinate packing is handled by `Rhex::CoordinatePacker.pack(q, r)`. You can pass a custom `GridAlgorithms` implementation for testing or alternative algorithms.
+The gem is **pure Ruby** (no native extension). Pathfinding, FOV, and reachability use a `Rhex::GridAlgorithms` instance injected via `grid_algorithms:` on `Grid.new` (which forwards it to `BfsPath` / `DfsPath` / `AstarPath` / `Reachable` / `FieldOfView`). All default to a frozen singleton `Rhex::GridAlgorithms::INSTANCE`. Coordinate packing is handled by `Rhex::CoordinatePacker.pack(q, r)`. You can pass a custom `GridAlgorithms` implementation for testing or alternative algorithms.
 
 ## Testing
 The project uses RSpec with 100% coverage enforced by SimpleCov. Run the suite with:
