@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name        = "rhex"
-  s.version     = "3.3.1"
+  s.version     = "3.3.2"
   s.summary     = "Ruby Hexagonal Grids"
   s.description = <<-DESCRIPTION
     A library providing hexagons management and hexagonal grids for ruby.

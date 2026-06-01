@@ -272,6 +272,54 @@ grid.to_pic("with_configs")
 
 The gem is **pure Ruby** (no native extension). Pathfinding, FOV, and reachability use a `Rhex::GridAlgorithms` instance injected via `grid_algorithms:` on `Grid.new` (which forwards it to `BfsPath` / `DfsPath` / `AstarPath` / `Reachable` / `FieldOfView`). All default to a frozen singleton `Rhex::GridAlgorithms::INSTANCE`. Coordinate packing is handled by `Rhex::CoordinatePacker.pack(q, r)`. You can pass a custom `GridAlgorithms` implementation for testing or alternative algorithms.
 
+## Benchmarks
+
+Heavy grid computations (`bfs_path`, `dfs_path`, `astar_path`, `reachable`, `field_of_view`) are
+measured by `benchmarks/pathfinding_benchmark.rb`. Grids are built as spiral rings of increasing
+radius (hex count `3·N² + 3·N + 1`); path benchmarks go from the center `(0, 0)` to the far corner
+`(N, 0)`. Run it with:
+
+```shell
+bundle exec ruby benchmarks/pathfinding_benchmark.rb
+```
+
+Each run is logged below per gem version. `field_of_view` is `O(N · radius)` (a line-of-sight scan
+to every cell), so it is only measured up to radius 100.
+
+### v3.3.2 — Ruby 3.3.7 (2026-06-01)
+
+**Time** — per-call CPU time in milliseconds (lower is better), averaged over 20 repetitions:
+
+| Operation                | r=50 (7 651 hx) | r=100 (30 301 hx) | r=150 (67 951 hx) | r=200 (120 601 hx) |
+|--------------------------|----------------:|------------------:|------------------:|-------------------:|
+| `bfs_path`               |           12.18 |             45.68 |            112.52 |             234.42 |
+| `bfs_path` (obstacles)   |            8.96 |             37.08 |             89.18 |             173.90 |
+| `dfs_path`               |            3.14 |             11.64 |             28.08 |              57.29 |
+| `astar_path`             |            0.24 |              0.44 |              0.87 |               1.29 |
+| `astar_path` (obstacles) |            0.32 |              0.92 |              1.83 |               3.14 |
+| `reachable(radius)`      |            8.20 |             32.88 |             92.02 |             152.39 |
+| `field_of_view`          |           99.44 |            766.69 |               n/a |                n/a |
+
+**Memory** — heap allocated per call in MiB (lower is better), measured with GC disabled:
+
+| Operation                | r=50 | r=100 | r=150 | r=200 |
+|--------------------------|-----:|------:|------:|------:|
+| `bfs_path`               | 3.99 | 16.32 | 43.06 | 67.26 |
+| `bfs_path` (obstacles)   | 3.25 | 13.12 | 31.71 | 54.56 |
+| `dfs_path`               | 1.03 |  3.03 | 10.73 | 12.60 |
+| `astar_path`             | 0.26 |  0.96 |  4.11 |  4.17 |
+| `astar_path` (obstacles) | 0.31 |  1.17 |  4.54 |  5.04 |
+| `reachable(radius)`      | 2.27 |  9.08 | 24.58 | 37.19 |
+| `field_of_view`          |10.04 | 78.00 |   n/a |   n/a |
+
+Retained grid footprint (the grid object, its lookup hash, and every hex): **0.80 MiB** (r=50),
+**3.19 MiB** (r=100), **9.18 MiB** (r=150), **13.20 MiB** (r=200).
+
+Takeaways: `astar_path` dominates point-to-point search on both axes — it is ~180× faster and
+allocates ~16× less than `bfs_path` at radius 200, because the hex-distance heuristic keeps it from
+expanding the whole grid. `field_of_view` is by far the heaviest operation (line-of-sight to every
+cell). Allocation volume tracks the number of cells each algorithm expands.
+
 ## Testing
 The project uses RSpec with 100% coverage enforced by SimpleCov. Run the suite with:
 ```shell

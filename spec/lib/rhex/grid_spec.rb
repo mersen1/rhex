@@ -322,6 +322,25 @@ RSpec.describe(Rhex::Grid) do
     end
   end
 
+  describe "#astar_path" do
+    it "delegates to AstarPath" do
+      ga = grid_algorithms
+      grid = described_class.new([hex_a], grid_algorithms: ga)
+      target = instance_double(Rhex::AxialHex)
+      obstacles = instance_double(Array)
+
+      shortest_path = double
+      astar_path_instance = double
+
+      expect(Rhex::AstarPath)
+        .to(receive(:new).with(grid_hash(grid), obstacles: obstacles,
+          grid_algorithms: ga).and_return(astar_path_instance))
+      expect(astar_path_instance).to(receive(:call).with(hex_a, target).and_return(shortest_path))
+
+      expect(grid.astar_path(hex_a, target, obstacles: obstacles)).to(eq(shortest_path))
+    end
+  end
+
   describe "#fetch" do
     it "returns the stored hex" do
       grid = described_class.new([hex_a])

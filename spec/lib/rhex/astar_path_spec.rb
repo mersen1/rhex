@@ -3,84 +3,135 @@
 require "spec_helper"
 
 RSpec.describe(Rhex::AstarPath) do
-  def axial(q, r) = Rhex::AxialHex.new(q, r)
+  include AxialHexHelpers
+  include GridHelpers
 
-  let(:grid) { Rhex::Grid.new(Rhex::AxialHex.new(0, 0).spiral_ring(3)) }
+  let(:grid_algorithms) { Rhex::GridAlgorithms::INSTANCE }
 
   describe "#call" do
-    context "when path exists" do
-      it "returns the shortest path from source to target" do
-        source = grid[axial(0, 0)]
-        target = grid[axial(2, -1)]
+    it "finds the shortest path on the same grid as BFS/DFS for comparison" do
+      grid = grid(3)
+      source = Rhex::AxialHex.new(0, 3)
+      target = Rhex::AxialHex.new(0, -3)
 
-        path = grid.astar_path(source, target)
+      astar_path = described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target)
+      bfs_path = Rhex::BfsPath.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target)
 
-        expect(path.first).to(eq(source))
-        expect(path.last).to(eq(target))
-        expect(path.length).to(eq(grid.bfs_path(source, target).length))
-      end
+      expected_shortest_path =
+        coords_to_hexes([[0, 3], [0, 2], [0, 1], [0, 0], [0, -1], [0, -2], [0, -3]])
+
+      expect(astar_path).to(eq(expected_shortest_path))
+      expect(astar_path.length).to(eq(bfs_path.length))
+
+      image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
+      Rhex::ImageConfigs.load!(image_configs_path)
+
+      # Use hexes from grid to ensure we have the correct objects
+      path_hexes = astar_path.map { |hex| grid.fetch(hex) }
+      path_hexes.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
+
+      source_hex = grid.fetch(source)
+      target_hex = grid.fetch(target)
+      source_hex.image_config = Rhex::ImageConfigs.image_config_for(:source)
+      target_hex.image_config = Rhex::ImageConfigs.image_config_for(:target)
+
+      grid.merge(path_hexes)
+        .merge([source_hex, target_hex])
+        .to_pic("astar_path", orientation: :pointy_topped, path: path_hexes)
     end
 
-    context "when path is blocked by obstacles" do
-      before { Rhex::ImageConfigs.load!(Rhex.root.join("spec", "fixtures", "image_configs")) }
+    context "when obstacles are defined" do
+      before do
+        image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
 
-      it "routes around obstacles and renders images/astar_path.png" do
-        source = grid[axial(0, 0)]
-        target = grid[axial(2, -1)]
-        obstacle = Rhex::AxialHex.new(1, 0, image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
+        Rhex::ImageConfigs.load!(image_configs_path)
+      end
 
-        path = grid.astar_path(source, target, obstacles: [obstacle])
+      it "finds the shortest path around obstacles", aggregate_failure: true do
+        grid = grid(3)
+        source = Rhex::AxialHex.new(0, 0)
+        target = Rhex::AxialHex.new(2, -2)
 
-        expect(path).not_to(include(obstacle))
-        expect(path.first).to(eq(source))
-        expect(path.last).to(eq(target))
+        obstacles =
+          coords_to_hexes([
+            [1, 0], [1, -1],
+          ], image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
 
-        path_hexes = path.map { |hex| grid.fetch(hex) }
+        astar_path =
+          described_class.new(grid_hash(grid), obstacles: obstacles, grid_algorithms: grid_algorithms).call(source,
+            target)
+        bfs_path =
+          Rhex::BfsPath.new(grid_hash(grid), obstacles: obstacles, grid_algorithms: grid_algorithms).call(source,
+            target)
+
+        # Use hexes from grid to ensure we have the correct objects
+        path_hexes = astar_path.map { |hex| grid.fetch(hex) }
         path_hexes.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
-        source.image_config = Rhex::ImageConfigs.image_config_for(:source)
-        target.image_config = Rhex::ImageConfigs.image_config_for(:target)
 
-        grid.merge([obstacle]).merge(path_hexes).merge([source, target])
-          .to_pic("astar_path", orientation: :pointy_topped, path: path_hexes)
+        source_hex = grid.fetch(source)
+        target_hex = grid.fetch(target)
+        source_hex.image_config = Rhex::ImageConfigs.image_config_for(:source)
+        target_hex.image_config = Rhex::ImageConfigs.image_config_for(:target)
+
+        grid.merge(obstacles)
+          .merge(path_hexes)
+          .merge([source_hex, target_hex])
+          .to_pic("astar_path_obstacles", orientation: :pointy_topped, path: path_hexes)
+
+        expect(astar_path.first).to(eq(source))
+        expect(astar_path.last).to(eq(target))
+        expect(astar_path & obstacles).to(be_empty)
+        expect(astar_path).to(all(satisfy { |hex| grid.include?(hex) }))
+        expect(astar_path.each_cons(2).all? { |a, b| a.distance(b) == 1 }).to(be(true))
+        expect(astar_path.length).to(eq(bfs_path.length))
       end
     end
 
-    context "when source equals target" do
-      it "returns a single-element path" do
-        source = grid[axial(0, 0)]
+    it "returns only the source when source equals target" do
+      grid = grid(1)
+      source = Rhex::AxialHex.new(0, 0)
 
-        path = grid.astar_path(source, source)
-
-        expect(path).to(eq([source]))
-      end
+      expect(described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source,
+        source)).to(eq([source]))
     end
 
-    context "when path does not exist" do
-      it "raises PathNotFoundError" do
-        small_grid = Rhex::Grid[axial(0, 0), axial(3, 0)]
-        source = small_grid[axial(0, 0)]
-        target = small_grid[axial(3, 0)]
+    it "returns grid-stored hex instances in the path" do
+      grid = grid(2)
+      source = grid.fetch(Rhex::AxialHex.new(0, 0))
+      target = grid.fetch(Rhex::AxialHex.new(1, 1))
 
-        expect { small_grid.astar_path(source, target) }.to(raise_error(Rhex::Grid::PathNotFoundError))
-      end
+      path = described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target)
+
+      expect(path.first).to(be(source))
+      expect(path.last).to(be(target))
+      path.each { |hex| expect(grid.fetch(hex)).to(be(hex)) }
     end
 
-    context "when source is not in grid" do
-      it "raises GridDoesNotContainSourceError" do
-        source = axial(99, 99)
-        target = grid[axial(0, 0)]
+    it "raises when no route exists" do
+      source = Rhex::AxialHex.new(0, 0)
+      target = Rhex::AxialHex.new(3, 0)
+      grid = Rhex::Grid.new([source, target])
 
-        expect { grid.astar_path(source, target) }.to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
-      end
+      expect { described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target) }
+        .to(raise_error(Rhex::Grid::PathNotFoundError))
     end
 
-    context "when target is not in grid" do
-      it "raises GridDoesNotContainTargetError" do
-        source = grid[axial(0, 0)]
-        target = axial(99, 99)
+    it "raises when the source is missing from the grid" do
+      grid = grid(0)
+      source = Rhex::AxialHex.new(1, 0)
+      target = Rhex::AxialHex.new(0, 0)
 
-        expect { grid.astar_path(source, target) }.to(raise_error(Rhex::Grid::GridDoesNotContainTargetError))
-      end
+      expect { described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target) }
+        .to(raise_error(Rhex::Grid::GridDoesNotContainSourceError))
+    end
+
+    it "raises when the target is missing from the grid" do
+      grid = grid(0)
+      source = Rhex::AxialHex.new(0, 0)
+      target = Rhex::AxialHex.new(1, 0)
+
+      expect { described_class.new(grid_hash(grid), grid_algorithms: grid_algorithms).call(source, target) }
+        .to(raise_error(Rhex::Grid::GridDoesNotContainTargetError))
     end
   end
 end
