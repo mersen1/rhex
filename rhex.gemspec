@@ -14,18 +14,10 @@ Gem::Specification.new do |s|
   s.license     = "MIT"
   s.required_ruby_version = ">= 3.3.7"
 
-  s.add_dependency("dry-validation")
-  s.add_dependency("rgl")
-  s.add_dependency("rmagick")
-  s.add_dependency("zeitwerk", "~>2.6")
-
-  s.add_development_dependency("pry-byebug")
-  s.add_development_dependency("racc")
-  s.add_development_dependency("rake")
-  s.add_development_dependency("rspec")
-  s.add_development_dependency("rubocop")
-  s.add_development_dependency("rubocop-shopify")
-  s.add_development_dependency("simplecov")
+  s.add_dependency("dry-validation", "~> 1.11")
+  s.add_dependency("rgl", "~> 0.6")
+  s.add_dependency("rmagick", "~> 6.0")
+  s.add_dependency("zeitwerk", "~> 2.6")
 
   s.require_paths = ["lib"]
 

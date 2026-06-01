@@ -88,8 +88,8 @@ obstacles = [Rhex::AxialHex.new(1, 0)]
 grid.field_of_view(source, obstacles: obstacles)
 ```
 
-### bfs_path(source, target, obstacles: []) -> Array<AxialHex>
-Shortest path inside the grid using breadth-first traversal. Raises if the source or target is missing from the grid. Returns an empty array when unreachable. When `ImageConfigs.path_image_config` is loaded, path cells carry that image config.
+### bfs_path(source, target, obstacles: []) -> Array<CubeHex>
+Shortest path inside the grid using breadth-first traversal. Raises `Grid::GridDoesNotContainSourceError` / `GridDoesNotContainTargetError` if the source or target is missing from the grid, and `Grid::PathNotFoundError` when the target is unreachable.
 
 ![BFS shortest path](images/bfs_path.png)
 ```ruby
@@ -99,8 +99,8 @@ dst  = Rhex::AxialHex.new(2, -1)
 grid.bfs_path(src, dst, obstacles: [Rhex::AxialHex.new(1, 0)])
 ```
 
-### dfs_path(source, target, obstacles: []) -> Array<AxialHex>
-Depth-first traversal that returns the first path it discovers to the target (not guaranteed to be the shortest). Obstacle handling and validation mirror `bfs_path`; unreachable paths return an empty array.
+### dfs_path(source, target, obstacles: []) -> Array<CubeHex>
+Depth-first traversal that returns the first path it discovers to the target (not guaranteed to be the shortest). Obstacle handling and validation mirror `bfs_path`, including the `Grid::PathNotFoundError` raised when the target is unreachable.
 
 ![DFS path](images/dfs_path.png)
 ```ruby
@@ -110,7 +110,7 @@ dst  = Rhex::AxialHex.new(2, -1)
 grid.dfs_path(src, dst, obstacles: [Rhex::AxialHex.new(1, 0)])
 ```
 
-### astar_path(source, target, obstacles: []) -> Array<AxialHex>
+### astar_path(source, target, obstacles: []) -> Array<CubeHex>
 Shortest path using A\* search with a hex-distance heuristic and a binary min-heap. Returns the same length as `bfs_path` but explores fewer cells on large grids. Validation, obstacle handling, and the `Grid::PathNotFoundError` / `GridDoesNotContain*Error` semantics match `bfs_path`.
 
 ![A* shortest path](images/astar_path.png)
@@ -125,7 +125,7 @@ grid.astar_path(src, dst, obstacles: [Rhex::AxialHex.new(1, 0)])
 Hex methods operate on individual coordinates and small derived collections.
 
 ### distance(other) -> Integer
-Manhattan distance between two hexes in cube coordinates.
+Distance between two hexes in cube coordinates (the number of steps between them).
 
 ```ruby
 a = Rhex::AxialHex.new(0, 0)
@@ -143,7 +143,7 @@ center.ring(2) # => hexes at distance 2
 ```
 
 ### spiral_ring(radius = 1) -> Array<CubeHex>
-Concentric rings for radii `1..radius` plus the origin. Raises `RadiusCannotBeZero` when `radius` is `0`.
+Concentric rings for radii `1..radius` plus the origin. Raises `RadiusCannotBeZero` when `radius` is not positive.
 
 ![Spiral ring](images/spiral_ring.png)
 ```ruby
@@ -166,18 +166,19 @@ Mirror the hex across the `q`, `r`, or `s` axis relative to an optional referenc
 
 ```ruby
 hex = Rhex::AxialHex.new(1, -2).to_cube
-hex.reflection_q            # mirror over q axis through origin
-hex.reflection_r(reference_point: Rhex::CubeHex.new(1, 0, -1))
+hex.reflection_q                          # mirror over q axis through origin
+hex.reflection_r(Rhex::CubeHex.new(1, 0, -1)) # mirror over r axis through a reference point
 ```
 
-### add(hex) / subtract(hex) -> CubeHex
-Coordinate-wise addition or subtraction, reused by several other operations.
+### +(hex) / -(hex) / *(scalar) -> CubeHex
+Coordinate-wise addition, subtraction, and scaling, reused by several other operations.
 
 ```ruby
 a = Rhex::AxialHex.new(0, 0).to_cube
 b = Rhex::AxialHex.new(1, -1).to_cube
-a.add(b)      # => CubeHex(1, -1, 0)
-a.subtract(b) # => CubeHex(-1, 1, 0)
+a + b   # => CubeHex(1, -1, 0)
+a - b   # => CubeHex(-1, 1, 0)
+b * 2   # => CubeHex(2, -2, 0)
 ```
 
 ### to_axial -> AxialHex / AxialHex#to_cube -> CubeHex
@@ -193,9 +194,12 @@ axial.to_cube # => original cube
 Arbitrary payload and rendering options preserved and propagated into derived hexes.
 
 ```ruby
-config = Rhex::Draw::Hexagon::DEFAULT_IMAGE_CONFIG
+config = {
+  hexagon: { color: "#F4F4F1", stroke_color: "#B3B3B3" },
+  text:    { color: "#000000", stroke_color: "none", font_size: 32 }
+}
 hex = Rhex::AxialHex.new(0, 0, data: { terrain: :grass }, image_config: config)
-hex.image_config # => returns image properties
+hex.image_config # => the validated config hash
 hex.data         # => { terrain: :grass }
 ```
 
@@ -207,25 +211,6 @@ a = Rhex::AxialHex.new(0, 0)
 b = Rhex::AxialHex.new(0, 0)
 a == b    # true
 { a => "same" }[b] # "same"
-```
-
-### Rhex::CubeHex::Math::Hexagon#movement_range(radius) -> Integer
-Number of cells reachable within `radius` steps (including the origin).
-
-![Reachable](images/reachable.png)
-```ruby
-include Rhex::CubeHex::Math::Hexagon
-movement_range(2) # => 19
-```
-
-Example (path-finding with obstacles):
-```ruby
-grid      = Rhex::AxialHex.new(0, 0).spiral_ring(3).to_grid
-source    = grid[Rhex::AxialHex.new(0, 0)]
-target    = Rhex::AxialHex.new(2, -1)
-obstacles = [Rhex::AxialHex.new(1, 0)]
-
-path = grid.bfs_path(source, target, obstacles: obstacles)
 ```
 
 ## Working with grids
@@ -249,12 +234,12 @@ path = grid.bfs_path(source, target, obstacles: obstacles)
 path = grid.bfs_path(source, target)
 grid.to_pic("bfs_path", orientation: :pointy_topped, path: path)
 ```
-- Default colors come from `Rhex::Draw::Hexagon::DEFAULT_IMAGE_CONFIG`. You can override per hex:
+- Each hex uses built-in default colors unless you supply an `image_config` hash. Override per hex:
 ```ruby
-config = Rhex::Draw::Hexagon::ImageConfig.new(
-  hexagon: Rhex::Draw::Hexagon::ImageProperties.new(color: "#FFFACD", stroke_color: "#222222"),
-  text:    Rhex::Draw::Hexagon::ImageProperties.new(color: "#333333", stroke_color: "none", font_size: 24)
-)
+config = {
+  hexagon: { color: "#FFFACD", stroke_color: "#222222" },
+  text:    { color: "#333333", stroke_color: "none", font_size: 24 }
+}
 hex = Rhex::AxialHex.new(0, 0, image_config: config)
 [hex].to_grid.to_pic("custom_hex")
 ```
@@ -278,7 +263,7 @@ text:
 Usage:
 ```ruby
 Rhex::ImageConfigs.load!(Rhex.root.join("config", "images"))
-source = Rhex::AxialHex.new(0, 0, image_config: Rhex::ImageConfigs.source_image_config)
+source = Rhex::AxialHex.new(0, 0, image_config: Rhex::ImageConfigs.image_config_for(:source))
 grid   = [source].to_grid
 grid.to_pic("with_configs")
 ```

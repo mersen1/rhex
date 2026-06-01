@@ -2,9 +2,9 @@ PATH
   remote: .
   specs:
     rhex (3.3.1)
-      dry-validation
-      rgl
-      rmagick
+      dry-validation (~> 1.11)
+      rgl (~> 0.6)
+      rmagick (~> 6.0)
       zeitwerk (~> 2.6)
 
 GEM
@@ -119,14 +119,14 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  pry-byebug
-  racc
-  rake
+  pry-byebug (~> 3.9)
+  racc (~> 1.8)
+  rake (~> 13.3)
   rhex!
-  rspec
-  rubocop
-  rubocop-shopify
-  simplecov
+  rspec (~> 3.11)
+  rubocop (~> 1.30)
+  rubocop-shopify (~> 2.7)
+  simplecov (~> 0.22)
 
 RUBY VERSION
    ruby 3.3.7
