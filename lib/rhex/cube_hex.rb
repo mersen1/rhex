@@ -4,7 +4,6 @@ module Rhex
   class CubeHex
     RadiusCannotBeZero = Class.new(StandardError)
 
-    # Вынес lerp в helper класса, так быстрее и чище
     def self.lerp(start, stop, t)
       (stop * t) + (start * (1.0 - t))
     end
@@ -44,10 +43,10 @@ module Rhex
       !self.==(other)
     end
 
-    # --- Арифметика (вместо add/subtract/scale) ---
+    # --- Arithmetic (replaces add/subtract/scale) ---
 
-    # Арифметика сохраняет полезную нагрузку левого операнда: производные гексы
-    # (соседи, кольца, линии) остаются с теми же data/image_config, что и исходный.
+    # Arithmetic carries the left operand payload over: derived hexes (neighbors, rings, lines)
+    # keep the same data/image_config as the hex they came from.
     def +(other)
       derive(q + other.q, r + other.r, s + other.s)
     end
@@ -60,7 +59,7 @@ module Rhex
       derive(q * other, r * other, s * other)
     end
 
-    # --- Геометрия ---
+    # --- Geometry ---
 
     def distance(hex)
       ((q - hex.q).abs + (r - hex.r).abs + (s - hex.s).abs) / 2
@@ -76,7 +75,7 @@ module Rhex
       Rhex::Constants::DIRECTION_VECTORS.map { |dq, dr, ds| derive(q + dq, r + dr, s + ds) }
     end
 
-    # --- Алгоритмы ---
+    # --- Algorithms ---
 
     def linedraw(target)
       dist = distance(target)
@@ -84,9 +83,9 @@ module Rhex
 
       nudge_q, nudge_r, nudge_s = Rhex::Constants::LINE_OF_SIGHT_NUDGE
 
-      # Смещение старта и конца, чтобы Lerp не попадал ровно на границу двух гексов.
-      # Считаем по координатам, без промежуточных гексов: на каждый шаг раньше
-      # создавалось два объекта (результат lerp и результат round) вместо одного.
+      # Nudge both ends so the lerp never lands exactly on the border between two hexes.
+      # Done on raw coordinates, without intermediate hexes: every step used to allocate two
+      # objects (the lerp result and the round result) instead of one.
       source_q = q + nudge_q
       source_r = r + nudge_r
       source_s = s + nudge_s
@@ -127,11 +126,10 @@ module Rhex
     def spiral_ring(radius = 1)
       raise(RadiusCannotBeZero) unless radius.positive?
 
-      # Используем flat_map для сбора единого массива
       (0..radius).flat_map { |r| ring(r) }
     end
 
-    # --- Отражения ---
+    # --- Reflections ---
 
     def reflection_q(ref = Rhex::CubeHex.new(0, 0, 0)) = with_reflection(ref) { [_1.q, _1.s, _1.r] }
     def reflection_r(ref = Rhex::CubeHex.new(0, 0, 0)) = with_reflection(ref) { [_1.s, _1.r, _1.q] }
@@ -169,8 +167,8 @@ module Rhex
       Rhex::CubeHex.new(new_q, new_r, new_s, data: data, image_config: image_config)
     end
 
-    # Кубическое округление: наибольшую ошибку восстанавливаем из двух других координат,
-    # чтобы сумма осталась нулевой.
+    # Cube rounding: the coordinate with the largest error is recomputed from the other two
+    # so that q + r + s stays 0.
     def round_to_hex(float_q, float_r, float_s)
       rq = float_q.round
       rr = float_r.round

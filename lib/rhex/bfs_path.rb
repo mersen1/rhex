@@ -79,7 +79,7 @@ module Rhex
 
     attr_reader :grid_hash, :obstacles, :grid_algorithms
 
-    # Скаляры вместо трёх массивов: вызывается на каждого соседа каждой посещённой клетки.
+    # Scalars instead of three arrays: called for every neighbor of every visited cell.
     def cross_product(sq, sr, tq, tr, nq, nr)
       ((tq - sq) * (sr - nr) - (sq - nq) * (tr - sr)).abs
     end

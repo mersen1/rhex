@@ -36,9 +36,9 @@ module Rhex
         cr = current.r
         current_packed_key = current.packed_key
 
-        # Один проход вместо сбора промежуточного массива: порядок обхода дельт тот же,
-        # а два разных соседа одной клетки не могут дать один и тот же packed_key,
-        # поэтому повторная проверка visited во втором проходе была избыточной.
+        # A single pass instead of collecting an intermediate array: the delta order is the same,
+        # and two different neighbors of one cell cannot produce the same packed_key, so the second
+        # pass re-checking visited was redundant.
         Constants::AXIAL_NEIGHBOR_DELTAS.each do |dq, dr|
           nq = cq + dq
           nr = cr + dr

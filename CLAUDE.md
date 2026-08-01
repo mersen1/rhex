@@ -77,4 +77,4 @@ when endpoints are missing, and `Grid::PathNotFoundError` when unreachable.
   structure must match the module nesting (`lib/rhex/draw/arrow.rb` → `Rhex::Draw::Arrow`).
 - Image configs are loaded from `*_config.yml` files via `ImageConfigs.load!(dir)` and fetched with
   `ImageConfigs.image_config_for(:key)` (filename `path_image_config.yml` → key `:path`).
-- Some source comments are in Russian; keep this in mind when reading/grepping.
+- Source comments are in English — keep it that way.

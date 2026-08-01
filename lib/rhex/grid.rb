@@ -96,8 +96,8 @@ module Rhex
       klass.new(self, *args, **kwargs, &)
     end
 
-    # Ключ считается напрямую, без промежуточного массива координат и его валидации:
-    # #neighbors — самый частый способ обхода сетки.
+    # The key is computed directly, without an intermediate coordinate array and its validation:
+    # #neighbors is the most common way to walk a grid.
     def neighbor(hex, direction_index)
       dq, dr = Rhex::Constants::AXIAL_NEIGHBOR_DELTAS[direction_index] ||
         raise(Rhex::DirectionIndexOutOfRange)

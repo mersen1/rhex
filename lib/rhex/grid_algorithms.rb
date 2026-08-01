@@ -26,15 +26,15 @@ module Rhex
       s1 = -source_q - source_r
       s2 = -target_q - target_r
 
-      # Всё, что не зависит от шага, считаем один раз: цикл выполняется dist раз на каждый
-      # гекс поля зрения, так что это самый горячий участок библиотеки.
+      # Everything step-independent is computed once: this loop runs dist times for every hex of
+      # a field of view, which makes it the hottest stretch of code in the library.
       delta_q = target_q - source_q
       delta_r = target_r - source_r
       delta_s = s2 - s1
 
       1.upto(dist) do |i|
-        # Ровно `i.to_f / dist`, а не `i * (1.0 / dist)`: вторая форма отличается на ulp
-        # и может иначе округлить точку, лежащую на границе двух гексов.
+        # Exactly `i.to_f / dist`, not `i * (1.0 / dist)`: the latter differs by an ulp and can
+        # round a point sitting on the border between two hexes the other way.
         t = i.to_f / dist
 
         fq = source_q + (delta_q * t) + nudge_q
