@@ -2,10 +2,11 @@
 
 module Rhex
   class Grid
+    include Enumerable
+
     GridDoesNotContainSourceError = Class.new(StandardError)
     GridDoesNotContainTargetError = Class.new(StandardError)
     PathNotFoundError = Class.new(StandardError)
-    HexNotFoundError = Class.new(StandardError)
 
     def self.[](*hexes)
       new(hexes)
@@ -29,7 +30,10 @@ module Rhex
         )
       end
 
-      @mutex.synchronize { @hash[key(hex)] = hex }
+      packed_key = key(hex)
+      prepared = prepare_hex(hex)
+
+      @mutex.synchronize { @hash[packed_key] = prepared }
       self
     end
     alias_method :<<, :add
@@ -37,24 +41,28 @@ module Rhex
     def each(&)
       return enum_for(:each) { size } unless block_given?
 
-      @hash.each_value(&)
+      # Iterating over a snapshot keeps the mutex free while the block runs, so a block that
+      # mutates the grid neither deadlocks nor breaks the iteration.
+      snapshot.each_value(&)
       self
     end
 
     def merge(other)
-      @mutex.synchronize do
-        if other.instance_of?(self.class)
-          @hash.update(other.send(:grid_hash))
-        else
-          other.each { |hex| @hash[key(hex)] = hex }
-        end
+      if other.instance_of?(self.class)
+        incoming = other.send(:snapshot)
+        @mutex.synchronize { @hash.update(incoming) }
+      else
+        # Goes through #add so subclasses (see Concerns::OrientedGrid) still decorate their hexes.
+        other.each { |hex| add(hex) }
       end
 
       self
     end
 
     def include?(hex)
-      @hash.key?(key(hex))
+      packed_key = key(hex)
+
+      @mutex.synchronize { @hash.key?(packed_key) }
     end
 
     def exclude?(hex)
@@ -62,12 +70,12 @@ module Rhex
     end
 
     def size
-      @hash.size
+      @mutex.synchronize { @hash.size }
     end
     alias_method :length, :size
 
     def to_a
-      @hash.values
+      @mutex.synchronize { @hash.values }
     end
 
     def to_pic(
@@ -88,8 +96,6 @@ module Rhex
     def neighbor(hex, direction_index)
       q, r, s = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
 
-      hex = fetch(hex) || raise(HexNotFoundError)
-
       fetch([
         hex.q + q,
         hex.r + r,
@@ -104,40 +110,45 @@ module Rhex
     end
 
     def reachable(source, movements_limit = 1, obstacles: [])
-      snapshot = @mutex.synchronize { @hash.dup }
       Reachable.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, movements_limit)
     end
 
     def field_of_view(source, obstacles: [])
-      snapshot = @mutex.synchronize { @hash.dup }
       FieldOfView.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source)
     end
 
     def bfs_path(source, target, obstacles: [])
-      snapshot = @mutex.synchronize { @hash.dup }
       BfsPath.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
     end
 
     def dfs_path(source, target, obstacles: [])
-      snapshot = @mutex.synchronize { @hash.dup }
       DfsPath.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
     end
 
     def astar_path(source, target, obstacles: [])
-      snapshot = @mutex.synchronize { @hash.dup }
       AstarPath.new(snapshot, obstacles: obstacles, grid_algorithms: @grid_algorithms).call(source, target)
     end
 
     def fetch(hex)
-      @hash[key(hex)]
+      packed_key = key(hex)
+
+      @mutex.synchronize { @hash[packed_key] }
     end
     alias_method :[], :fetch
 
     protected
 
-    def grid_hash = @hash
+    # Immutable view of the store: taken under the lock, handed to algorithms and iterators.
+    def snapshot
+      @mutex.synchronize { @hash.dup }
+    end
 
     private
+
+    # Overridden by Concerns::OrientedGrid to wrap hexes in a screen-coordinate decorator.
+    def prepare_hex(hex)
+      hex
+    end
 
     def key(hex)
       if hex.is_a?(Array)
@@ -157,13 +168,12 @@ module Rhex
         return CoordinatePacker.pack(hex[0], hex[1])
       end
 
-      hex.packed_key
+      # Non-integer coordinates (an intermediate lerp result, a median, ...) have no packed key.
+      # Returning the nil would silently collapse every such hex onto a single bucket.
+      hex.packed_key || raise(
+        ArgumentError,
+        "Hex coordinates must be Integers to be used as a grid key, got: (#{hex.q.inspect}, #{hex.r.inspect})"
+      )
     end
-  end
-end
-
-module Enumerable
-  def to_grid(klass = Rhex::Grid, *args, **kwargs, &)
-    klass.new(self, *args, **kwargs, &)
   end
 end

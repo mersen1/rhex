@@ -11,11 +11,6 @@ module Rhex
 
       attr_reader :hex_size
 
-      def add(hex)
-        @hash[key(hex)] = decorate_hex(hex)
-        self
-      end
-
       def decorate_hex(hex)
         hex_decorator_class.new(hex, size: hex_size)
       end
@@ -25,6 +20,10 @@ module Rhex
       end
 
       private
+
+      def prepare_hex(hex)
+        decorate_hex(hex)
+      end
 
       def hex_decorator_class
         raise NoMethodError, "method #{__method__} is not implemented"

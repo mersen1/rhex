@@ -52,12 +52,6 @@ RSpec.describe(Rhex::CubeHex) do
   end
 
   describe "#linedraw" do
-    module Enumerable
-      def to_grid(klass = Rhex::Grid, *args, **kwargs, &)
-        klass.new(self, *args, **kwargs, &)
-      end
-    end
-
     it "returns straight path to the target" do
       source = Rhex::AxialHex.new(-4, 0)
       target = Rhex::AxialHex.new(4, -2)
@@ -73,6 +67,14 @@ RSpec.describe(Rhex::CubeHex) do
           Rhex::AxialHex.new(1, -1), Rhex::AxialHex.new(2, -1), Rhex::AxialHex.new(3, -2),
           target
         ))
+    end
+  end
+
+  describe "#linedraw" do
+    it "returns just the source when target is the source itself" do
+      hex = Rhex::AxialHex.new(2, -1)
+
+      expect(hex.linedraw(hex)).to(eq([hex]))
     end
   end
 
@@ -168,6 +170,34 @@ RSpec.describe(Rhex::CubeHex) do
       hex = described_class.new(0.1, 0.2, -0.3)
 
       expect(hex.send(:round)).to(eq(described_class.new(0, 0, 0)))
+    end
+  end
+
+  describe "payload propagation" do
+    let(:image_config) { Rhex::ImageConfigs.image_config_for(:path) }
+    let(:hex) { Rhex::AxialHex.new(0, 0, data: :payload, image_config: image_config) }
+
+    it "keeps data and image_config in arithmetic results" do
+      derived = hex + Rhex::CubeHex.new(1, 0, -1)
+
+      expect(derived.data).to(eq(:payload))
+      expect(derived.image_config).to(eq(hex.image_config))
+      expect((hex - Rhex::CubeHex.new(1, 0, -1)).data).to(eq(:payload))
+      expect((hex * 2).data).to(eq(:payload))
+    end
+
+    it "keeps data and image_config in derived hexes" do
+      derived = hex.spiral_ring(2) + hex.neighbors + hex.linedraw(Rhex::AxialHex.new(3, 0))
+
+      expect(derived.map(&:data).uniq).to(eq([:payload]))
+      expect(derived.map(&:image_config).uniq).to(eq([hex.image_config]))
+    end
+  end
+
+  describe "#image_config=" do
+    it "raises a prefixed error for an invalid config" do
+      expect { Rhex::AxialHex.new(0, 0, image_config: { hexagon: {} }) }
+        .to(raise_error(ArgumentError, /\AInvalid image_config: /))
     end
   end
 end

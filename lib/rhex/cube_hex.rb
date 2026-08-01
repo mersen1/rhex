@@ -16,7 +16,8 @@ module Rhex
       @r = r
       @s = s
       @data = data
-      @packed_key = q.is_a?(Integer) && r.is_a?(Integer) ? (q << 32) | (r & 0xFFFFFFFF) : nil
+      # Intermediate hexes (lerp results, medians) may carry Floats — those have no packed key.
+      @packed_key = CoordinatePacker.pack(q, r) if q.is_a?(Integer) && r.is_a?(Integer)
 
       self.image_config = image_config
     end
@@ -25,7 +26,7 @@ module Rhex
       return @image_config = nil unless value
 
       validation = Rhex::Contracts::ImageConfigContract.new.call(value)
-      validation.failure? && raise(ArgumentError, validation.errors.to_h)
+      validation.failure? && raise(ArgumentError, "Invalid image_config: #{validation.errors.to_h}")
 
       @image_config = validation.to_h
     end
@@ -45,16 +46,18 @@ module Rhex
 
     # --- Арифметика (вместо add/subtract/scale) ---
 
+    # Арифметика сохраняет полезную нагрузку левого операнда: производные гексы
+    # (соседи, кольца, линии) остаются с теми же data/image_config, что и исходный.
     def +(other)
-      Rhex::CubeHex.new(q + other.q, r + other.r, s + other.s)
+      derive(q + other.q, r + other.r, s + other.s)
     end
 
     def -(other)
-      Rhex::CubeHex.new(q - other.q, r - other.r, s - other.s)
+      derive(q - other.q, r - other.r, s - other.s)
     end
 
     def *(other)
-      Rhex::CubeHex.new(q * other, r * other, s * other)
+      derive(q * other, r * other, s * other)
     end
 
     # --- Геометрия ---
@@ -77,6 +80,7 @@ module Rhex
 
     def linedraw(target)
       dist = distance(target)
+      return [self] if dist.zero?
 
       # Сразу создаем смещение как объект один раз
       offset = Rhex::CubeHex.new(*Rhex::Constants::LINE_OF_SIGHT_NUDGE)
@@ -144,11 +148,11 @@ module Rhex
         rs = -rq - rr
       end
 
-      Rhex::CubeHex.new(rq, rr, rs)
+      derive(rq, rr, rs)
     end
 
     def lerp(target, step)
-      Rhex::CubeHex.new(
+      derive(
         self.class.lerp(q, target.q, step),
         self.class.lerp(r, target.r, step),
         self.class.lerp(s, target.s, step)
@@ -160,7 +164,13 @@ module Rhex
     def with_reflection(reference_point)
       subtracted = self - reference_point
       new_q, new_r, new_s = yield(subtracted)
-      Rhex::CubeHex.new(new_q, new_r, new_s) + reference_point
+      derive(new_q, new_r, new_s) + reference_point
+    end
+
+    private
+
+    def derive(new_q, new_r, new_s)
+      Rhex::CubeHex.new(new_q, new_r, new_s, data: data, image_config: image_config)
     end
   end
 end

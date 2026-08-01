@@ -31,3 +31,11 @@ module Rhex
     end
   end
 end
+
+# Defined here rather than in `lib/rhex/grid.rb` on purpose: Zeitwerk only loads that file once
+# `Rhex::Grid` is referenced, which would leave `to_grid` undefined right after `require "rhex"`.
+module Enumerable
+  def to_grid(klass = Rhex::Grid, *args, **kwargs, &)
+    klass.new(self, *args, **kwargs, &)
+  end
+end

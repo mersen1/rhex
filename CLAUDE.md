@@ -35,8 +35,11 @@ bundle exec rubocop       # lint (rubocop-shopify base config)
 
 ### Grid as a coordinate-keyed store
 - `Rhex::Grid` wraps a `@hash` keyed by `packed_key`. `add`/`<<`/`merge` overwrite by coordinate;
-  `include?`, `size`, `to_a` give set-like semantics. Mutation is guarded by a `Mutex`.
-- `Enumerable#to_grid` (monkey-patched) turns any hex collection into a `Grid`.
+  `include?`, `size`, `to_a` give set-like semantics. Reads and writes are both guarded by a `Mutex`;
+  `each` iterates a snapshot so the lock is never held while a caller's block runs. Subclasses hook
+  into storage through the private `prepare_hex`, not by overriding `add`.
+- `Enumerable#to_grid` (monkey-patched) turns any hex collection into a `Grid`. It lives in
+  `lib/rhex.rb`, not in `grid.rb` — Zeitwerk would otherwise only define it once `Rhex::Grid` is referenced.
 
 ### Algorithms are injected, not inherited
 This is the key architectural decision. `Grid` does **not** implement algorithms itself. Each algorithm

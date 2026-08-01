@@ -52,6 +52,13 @@ RSpec.describe(Rhex::GridToPic) do
       described_class.new(hex_grid, hex_size: 2, path: path).call("example")
     end
 
+    it "raises when a path hex is missing from the rendered grid" do
+      path = [Rhex::AxialHex.new(0, 0), Rhex::AxialHex.new(9, 0)]
+
+      expect { described_class.new(grid(1), hex_size: 2, path: path).call("example") }
+        .to(raise_error(ArgumentError, /Path hex \(9, 0\) is not present in the grid/))
+    end
+
     it "raises on invalid filename" do
       expect { described_class.new(hex_grid, hex_size: 2).call("../etc/passwd") }
         .to(raise_error(ArgumentError, "Invalid filename"))

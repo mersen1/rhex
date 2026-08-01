@@ -45,6 +45,23 @@ RSpec.describe(Rhex::Grid) do
 
       expect(grid.to_a.map(&:data)).to(contain_exactly(:other))
     end
+
+    it "raises when the hex has non-integer coordinates" do
+      grid = described_class.new
+
+      expect { grid.add(Rhex::CubeHex.new(0.5, 0.5, -1.0)) }
+        .to(raise_error(ArgumentError, /Hex coordinates must be Integers to be used as a grid key/))
+    end
+  end
+
+  describe "Enumerable" do
+    it "exposes the standard collection interface" do
+      grid = described_class.new([hex_a, hex_b])
+
+      expect(grid).to(be_a(Enumerable))
+      expect(grid.map(&:q)).to(contain_exactly(0, 1))
+      expect(grid.select { _1.data == :payload }).to(eq([hex_b]))
+    end
   end
 
   describe "#each" do
@@ -94,6 +111,21 @@ RSpec.describe(Rhex::Grid) do
       base.merge(other)
 
       expect(base.fetch(base_hex).data).to(eq(:other))
+    end
+
+    it "routes an enumerable through #add so subclasses still decorate hexes" do
+      oriented = Rhex::FlatToppedGrid.new([hex_a], hex_size: 64)
+
+      oriented.merge([hex_b])
+
+      expect(oriented.to_a).to(all(be_a(Rhex::Decorators::FlatToppedHex)))
+    end
+
+    it "raises when an enumerable contains a non-hex object" do
+      grid = described_class.new([hex_a])
+
+      expect { grid.merge(["not a hex"]) }
+        .to(raise_error(ArgumentError, /Only Rhex::CubeHex or Rhex::AxialHex/))
     end
   end
 
@@ -166,6 +198,13 @@ RSpec.describe(Rhex::Grid) do
       grid = described_class.new([hex_a])
 
       expect { grid.neighbor(hex_a, 10) }.to(raise_error(Rhex::DirectionIndexOutOfRange))
+    end
+
+    it "returns nil when the source hex itself is outside of the grid" do
+      grid = described_class.new([hex_a])
+
+      expect(grid.neighbor(Rhex::AxialHex.new(99, 0), 0)).to(be_nil)
+      expect(grid.neighbors(Rhex::AxialHex.new(99, 0))).to(eq([]))
     end
   end
 

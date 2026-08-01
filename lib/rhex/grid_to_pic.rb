@@ -43,7 +43,15 @@ module Rhex
     def draw_path_arrows
       return if path.nil?
 
-      oriented_path = path.filter_map { |hex| grid.fetch(hex) }
+      # Dropping a missing hex silently would join its neighbours in #each_cons and draw one long
+      # arrow across unrelated cells, so an incomplete path is an error rather than a bad picture.
+      oriented_path = path.map do |hex|
+        grid.fetch(hex) || raise(
+          ArgumentError,
+          "Path hex (#{hex.q}, #{hex.r}) is not present in the grid being rendered"
+        )
+      end
+
       oriented_path.each_cons(2) do |from, to|
         Draw::Arrow.new(gc: gc, from: from, to: to).call
       end

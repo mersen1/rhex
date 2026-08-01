@@ -9,8 +9,13 @@ module Rhex
       ((q1 - q2).abs + (q1 + r1 - q2 - r2).abs + (r1 - r2).abs) / 2
     end
 
+    # Accepts anything that exposes q/r, not just Rhex hexes; a nil packed_key (non-integer
+    # coordinates) would otherwise register every such obstacle under the same key and block nothing.
     def obstacle_packed_key_set(obstacles)
-      Array(obstacles).each_with_object({}) { |h, acc| acc[h.packed_key] = true }
+      Array(obstacles).each_with_object({}) do |h, acc|
+        packed_key = h.packed_key if h.respond_to?(:packed_key)
+        acc[packed_key || CoordinatePacker.pack(h.q, h.r)] = true
+      end
     end
 
     def line_blocked?(source_q, source_r, target_q, target_r, obstacle_set)
