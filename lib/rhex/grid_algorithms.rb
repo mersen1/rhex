@@ -47,7 +47,7 @@ module Rhex
           rr = -rq - rs
         end
 
-        return true if obstacle_set[CoordinatePacker.pack(rq, rr)]
+        return true if obstacle_set[CoordinatePacker.pack_unchecked(rq, rr)]
       end
 
       false

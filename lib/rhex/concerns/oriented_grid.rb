@@ -21,8 +21,10 @@ module Rhex
 
       private
 
+      # A hex coming from another oriented grid is already wrapped — and possibly by a decorator of
+      # a different orientation or hex_size, so unwrap before re-decorating instead of nesting.
       def prepare_hex(hex)
-        decorate_hex(hex)
+        decorate_hex(hex.is_a?(Rhex::Decorators::BaseOrientedHex) ? hex.__getobj__ : hex)
       end
 
       def hex_decorator_class

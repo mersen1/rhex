@@ -52,6 +52,12 @@ RSpec.describe(Rhex::GridToPic) do
       described_class.new(hex_grid, hex_size: 2, path: path).call("example")
     end
 
+    it "renders a grid that is already oriented" do
+      oriented = Rhex::FlatToppedGrid.new(grid(1), hex_size: 2)
+
+      expect { oriented.to_pic("example") }.not_to(raise_error)
+    end
+
     it "raises when a path hex is missing from the rendered grid" do
       path = [Rhex::AxialHex.new(0, 0), Rhex::AxialHex.new(9, 0)]
 

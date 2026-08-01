@@ -23,7 +23,9 @@ module Rhex
     end
 
     def add(hex)
-      unless hex.is_a?(Rhex::CubeHex)
+      # Oriented grids store hexes wrapped in a screen-coordinate decorator; such a hex is still a
+      # hex and must survive a round-trip back into a grid (`to_grid`, `merge`, `to_pic`).
+      unless hex.is_a?(Rhex::CubeHex) || hex.is_a?(Rhex::Decorators::BaseOrientedHex)
         raise(
           ArgumentError,
           "Only Rhex::CubeHex or Rhex::AxialHex instances can be added to the grid, got: #{hex.class}"
@@ -59,10 +61,11 @@ module Rhex
       self
     end
 
+    # Single-key reads are left unsynchronized on purpose: one Hash lookup cannot observe a
+    # half-applied write under the GVL, and taking the mutex here doubles the cost of the hottest
+    # path in the library. Only bulk reads (#each, #to_a, #snapshot) need the lock.
     def include?(hex)
-      packed_key = key(hex)
-
-      @mutex.synchronize { @hash.key?(packed_key) }
+      @hash.key?(key(hex))
     end
 
     def exclude?(hex)
@@ -70,7 +73,7 @@ module Rhex
     end
 
     def size
-      @mutex.synchronize { @hash.size }
+      @hash.size
     end
     alias_method :length, :size
 
@@ -130,9 +133,7 @@ module Rhex
     end
 
     def fetch(hex)
-      packed_key = key(hex)
-
-      @mutex.synchronize { @hash[packed_key] }
+      @hash[key(hex)]
     end
     alias_method :[], :fetch
 
@@ -165,7 +166,7 @@ module Rhex
           )
         end
 
-        return CoordinatePacker.pack(hex[0], hex[1])
+        return CoordinatePacker.pack_unchecked(hex[0], hex[1])
       end
 
       # Non-integer coordinates (an intermediate lerp result, a median, ...) have no packed key.

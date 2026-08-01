@@ -121,6 +121,15 @@ RSpec.describe(Rhex::Grid) do
       expect(oriented.to_a).to(all(be_a(Rhex::Decorators::FlatToppedHex)))
     end
 
+    it "accepts hexes coming from an already oriented grid" do
+      oriented = Rhex::FlatToppedGrid.new([hex_a, hex_b], hex_size: 64)
+
+      converted = oriented.to_grid(Rhex::PointyToppedGrid, hex_size: 32)
+
+      expect(converted.to_a).to(all(be_a(Rhex::Decorators::PointyToppedHex)))
+      expect(converted.to_a.map(&:__getobj__)).to(all(be_a(Rhex::CubeHex)))
+    end
+
     it "raises when an enumerable contains a non-hex object" do
       grid = described_class.new([hex_a])
 

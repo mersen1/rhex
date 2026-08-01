@@ -17,7 +17,7 @@ module Rhex
       @s = s
       @data = data
       # Intermediate hexes (lerp results, medians) may carry Floats — those have no packed key.
-      @packed_key = CoordinatePacker.pack(q, r) if q.is_a?(Integer) && r.is_a?(Integer)
+      @packed_key = CoordinatePacker.pack_unchecked(q, r) if q.is_a?(Integer) && r.is_a?(Integer)
 
       self.image_config = image_config
     end

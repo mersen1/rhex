@@ -34,7 +34,7 @@ module Rhex
         next_dist = current_dist + 1
 
         Constants::AXIAL_NEIGHBOR_DELTAS.each do |dq, dr|
-          neighbor_packed_key = CoordinatePacker.pack(current.q + dq, current.r + dr)
+          neighbor_packed_key = CoordinatePacker.pack_unchecked(current.q + dq, current.r + dr)
 
           next if obstacle_set.key?(neighbor_packed_key) || distance_map.key?(neighbor_packed_key)
 

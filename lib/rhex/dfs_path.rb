@@ -40,7 +40,7 @@ module Rhex
         Constants::AXIAL_NEIGHBOR_DELTAS.each do |dq, dr|
           nq = cq + dq
           nr = cr + dr
-          neighbor_packed_key = CoordinatePacker.pack(nq, nr)
+          neighbor_packed_key = CoordinatePacker.pack_unchecked(nq, nr)
 
           next if obstacle_set.key?(neighbor_packed_key) || visited.key?(neighbor_packed_key)
 
