@@ -36,7 +36,9 @@ module Rhex
         cr = current.r
         current_packed_key = current.packed_key
 
-        neighs = []
+        # Один проход вместо сбора промежуточного массива: порядок обхода дельт тот же,
+        # а два разных соседа одной клетки не могут дать один и тот же packed_key,
+        # поэтому повторная проверка visited во втором проходе была избыточной.
         Constants::AXIAL_NEIGHBOR_DELTAS.each do |dq, dr|
           nq = cq + dq
           nr = cr + dr
@@ -46,12 +48,6 @@ module Rhex
 
           n_hex = grid_hash[neighbor_packed_key]
           next unless n_hex
-
-          neighs << [neighbor_packed_key, n_hex]
-        end
-
-        neighs.each do |neighbor_packed_key, n_hex|
-          next if visited.key?(neighbor_packed_key)
 
           visited[neighbor_packed_key] = true
           parents[neighbor_packed_key] = current_packed_key

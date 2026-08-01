@@ -19,19 +19,27 @@ module Rhex
     end
 
     def line_blocked?(source_q, source_r, target_q, target_r, obstacle_set)
-      nudge = Constants::LINE_OF_SIGHT_NUDGE
+      nudge_q, nudge_r, nudge_s = Constants::LINE_OF_SIGHT_NUDGE
       dist = hex_distance(source_q, source_r, target_q, target_r)
       return false if dist.zero?
 
       s1 = -source_q - source_r
       s2 = -target_q - target_r
 
+      # Всё, что не зависит от шага, считаем один раз: цикл выполняется dist раз на каждый
+      # гекс поля зрения, так что это самый горячий участок библиотеки.
+      delta_q = target_q - source_q
+      delta_r = target_r - source_r
+      delta_s = s2 - s1
+
       1.upto(dist) do |i|
+        # Ровно `i.to_f / dist`, а не `i * (1.0 / dist)`: вторая форма отличается на ulp
+        # и может иначе округлить точку, лежащую на границе двух гексов.
         t = i.to_f / dist
 
-        fq = source_q + (target_q - source_q) * t + nudge[0]
-        fr = source_r + (target_r - source_r) * t + nudge[1]
-        fs = s1 + (s2 - s1) * t + nudge[2]
+        fq = source_q + (delta_q * t) + nudge_q
+        fr = source_r + (delta_r * t) + nudge_r
+        fs = s1 + (delta_s * t) + nudge_s
 
         rq = fq.round
         rr = fr.round

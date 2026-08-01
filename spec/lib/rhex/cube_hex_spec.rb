@@ -173,6 +173,16 @@ RSpec.describe(Rhex::CubeHex) do
     end
   end
 
+  describe "#lerp" do
+    it "interpolates towards the target" do
+      source = described_class.new(0, 0, 0)
+      target = described_class.new(4, -4, 0)
+
+      expect(source.lerp(target, 0.5)).to(eq(described_class.new(2.0, -2.0, 0.0)))
+      expect(source.lerp(target, 0.0)).to(eq(source))
+    end
+  end
+
   describe "payload propagation" do
     let(:image_config) { Rhex::ImageConfigs.image_config_for(:path) }
     let(:hex) { Rhex::AxialHex.new(0, 0, data: :payload, image_config: image_config) }

@@ -96,20 +96,22 @@ module Rhex
       klass.new(self, *args, **kwargs, &)
     end
 
+    # Ключ считается напрямую, без промежуточного массива координат и его валидации:
+    # #neighbors — самый частый способ обхода сетки.
     def neighbor(hex, direction_index)
-      q, r, s = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
+      dq, dr = Rhex::Constants::AXIAL_NEIGHBOR_DELTAS[direction_index] ||
+        raise(Rhex::DirectionIndexOutOfRange)
 
-      fetch([
-        hex.q + q,
-        hex.r + r,
-        hex.s + s,
-      ])
+      @hash[CoordinatePacker.pack(hex.q + dq, hex.r + dr)]
     end
 
     def neighbors(hex)
-      Rhex::Constants::DIRECTION_VECTORS
-        .map
-        .with_index { |_, direction_index| neighbor(hex, direction_index) }.compact
+      q = hex.q
+      r = hex.r
+
+      Rhex::Constants::AXIAL_NEIGHBOR_DELTAS.filter_map do |dq, dr|
+        @hash[CoordinatePacker.pack(q + dq, r + dr)]
+      end
     end
 
     def reachable(source, movements_limit = 1, obstacles: [])

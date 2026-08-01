@@ -67,13 +67,13 @@ module Rhex
     end
 
     def neighbor(direction_index)
-      coords = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
+      dq, dr, ds = Rhex::Constants::DIRECTION_VECTORS[direction_index] || raise(Rhex::DirectionIndexOutOfRange)
 
-      self + Rhex::CubeHex.new(*coords)
+      derive(q + dq, r + dr, s + ds)
     end
 
     def neighbors
-      Rhex::Constants::DIRECTION_VECTORS.map.with_index { |_, direction_index| neighbor(direction_index) }
+      Rhex::Constants::DIRECTION_VECTORS.map { |dq, dr, ds| derive(q + dq, r + dr, s + ds) }
     end
 
     # --- Алгоритмы ---
@@ -82,16 +82,28 @@ module Rhex
       dist = distance(target)
       return [self] if dist.zero?
 
-      # Сразу создаем смещение как объект один раз
-      offset = Rhex::CubeHex.new(*Rhex::Constants::LINE_OF_SIGHT_NUDGE)
+      nudge_q, nudge_r, nudge_s = Rhex::Constants::LINE_OF_SIGHT_NUDGE
 
-      # Добавляем смещение к старту и концу для корректного Lerp
-      source_nudged = self + offset
-      target_nudged = target + offset
+      # Смещение старта и конца, чтобы Lerp не попадал ровно на границу двух гексов.
+      # Считаем по координатам, без промежуточных гексов: на каждый шаг раньше
+      # создавалось два объекта (результат lerp и результат round) вместо одного.
+      source_q = q + nudge_q
+      source_r = r + nudge_r
+      source_s = s + nudge_s
+      target_q = target.q + nudge_q
+      target_r = target.r + nudge_r
+      target_s = target.s + nudge_s
+
+      inverse_dist = 1.0 / dist
 
       (0..dist).map do |i|
-        step = 1.0 / dist * i
-        source_nudged.lerp(target_nudged, step).round
+        step = inverse_dist * i
+
+        round_to_hex(
+          self.class.lerp(source_q, target_q, step),
+          self.class.lerp(source_r, target_r, step),
+          self.class.lerp(source_s, target_s, step)
+        )
       end
     end
 
@@ -132,23 +144,7 @@ module Rhex
     # --- Protected / Private Helpers ---
 
     def round
-      rq = q.round
-      rr = r.round
-      rs = s.round
-
-      q_diff = (rq - q).abs
-      r_diff = (rr - r).abs
-      s_diff = (rs - s).abs
-
-      if q_diff > r_diff && q_diff > s_diff
-        rq = -rr - rs
-      elsif r_diff > s_diff
-        rr = -rq - rs
-      else
-        rs = -rq - rr
-      end
-
-      derive(rq, rr, rs)
+      round_to_hex(q, r, s)
     end
 
     def lerp(target, step)
@@ -171,6 +167,28 @@ module Rhex
 
     def derive(new_q, new_r, new_s)
       Rhex::CubeHex.new(new_q, new_r, new_s, data: data, image_config: image_config)
+    end
+
+    # Кубическое округление: наибольшую ошибку восстанавливаем из двух других координат,
+    # чтобы сумма осталась нулевой.
+    def round_to_hex(float_q, float_r, float_s)
+      rq = float_q.round
+      rr = float_r.round
+      rs = float_s.round
+
+      q_diff = (rq - float_q).abs
+      r_diff = (rr - float_r).abs
+      s_diff = (rs - float_s).abs
+
+      if q_diff > r_diff && q_diff > s_diff
+        rq = -rr - rs
+      elsif r_diff > s_diff
+        rr = -rq - rs
+      else
+        rs = -rq - rr
+      end
+
+      derive(rq, rr, rs)
     end
   end
 end

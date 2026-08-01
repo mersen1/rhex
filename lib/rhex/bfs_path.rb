@@ -50,7 +50,7 @@ module Rhex
           next unless n_hex
 
           dist = ga.hex_distance(nq, nr, target_q, target_r)
-          cross = cross_product([start_q, start_r], [target_q, target_r], [nq, nr])
+          cross = cross_product(start_q, start_r, target_q, target_r, nq, nr)
           neighs << [dist, cross, nq, nr, neighbor_packed_key, n_hex]
         end
 
@@ -79,10 +79,8 @@ module Rhex
 
     attr_reader :grid_hash, :obstacles, :grid_algorithms
 
-    def cross_product(start_qr, target_qr, neighbor_qr)
-      sq, sr = start_qr
-      tq, tr = target_qr
-      nq, nr = neighbor_qr
+    # Скаляры вместо трёх массивов: вызывается на каждого соседа каждой посещённой клетки.
+    def cross_product(sq, sr, tq, tr, nq, nr)
       ((tq - sq) * (sr - nr) - (sq - nq) * (tr - sr)).abs
     end
   end

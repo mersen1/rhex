@@ -402,6 +402,13 @@ RSpec.describe(Rhex::Grid) do
       expect(grid.fetch(Rhex::AxialHex.new(2, 2))).to(be_nil)
     end
 
+    it "looks up by an array of coordinates" do
+      grid = described_class.new([hex_b])
+
+      expect(grid.fetch([1, 0])).to(eq(hex_b))
+      expect(grid.fetch([1, 0, -1])).to(eq(hex_b))
+    end
+
     it "raises for an array with non-integer elements" do
       grid = described_class.new([hex_a])
 
