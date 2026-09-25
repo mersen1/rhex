@@ -240,6 +240,16 @@ The gem is **pure Ruby** (no native extension). Pathfinding, FOV, and reachabili
 
 ## Benchmarks
 
+For a short comparison of grid reads, snapshots, pathfinding, and concurrent reads, run:
+
+```shell
+bundle exec ruby benchmarks/grid_performance_benchmark.rb
+```
+
+Use `RHEX_LIB_DIR=/path/to/other/checkout/lib` to run the same workload against another
+revision. The script reports median calls per second and allocated objects per call across five
+timed rounds. Timing results are for manual comparison rather than a fixed CI threshold.
+
 Heavy grid computations (`bfs_path`, `dfs_path`, `astar_path`, `reachable`, `field_of_view`) are
 measured by `benchmarks/pathfinding_benchmark.rb`. Grids are built as spiral rings of increasing
 radius (hex count `3·N² + 3·N + 1`); path benchmarks go from the center `(0, 0)` to the far corner
