@@ -37,7 +37,7 @@ grid.to_pic("sample_grid", hex_size: 48, orientation: Rhex::GridToPic::POINTY_TO
 ```
 
 ## Core types
-- `Rhex::CubeHex` – stores `q`, `r`, `s` coordinates plus optional `data` payload and optional `image_config` used for rendering.
+- `Rhex::CubeHex` – stores `q`, `r`, `s` coordinates plus an optional `data` payload.
 - `Rhex::AxialHex` – lightweight wrapper around `CubeHex` that omits `s`; convert with `to_cube` / `to_axial`.
 - Equality, `eql?`, and `hash` are coordinate based, so hexes with the same coordinates compare equal and work as hash keys.
 - Reflection helpers: `reflection_q`, `reflection_r`, `reflection_s` reflect across the corresponding axes relative to an optional reference point.
@@ -190,18 +190,15 @@ axial = cube.to_axial
 axial.to_cube # => original cube
 ```
 
-### image_config (attr_accessor) / data (attr_reader)
-Arbitrary payload and rendering options preserved and propagated into derived hexes.
+### data (attr_reader)
+Arbitrary payload is preserved in derived hexes.
 
 ```ruby
-config = {
-  hexagon: { color: "#F4F4F1", stroke_color: "#B3B3B3" },
-  text:    { color: "#000000", stroke_color: "none", font_size: 32 }
-}
-hex = Rhex::AxialHex.new(0, 0, data: { terrain: :grass }, image_config: config)
-hex.image_config # => the validated config hash
-hex.data         # => { terrain: :grass }
+hex = Rhex::AxialHex.new(0, 0, data: { terrain: :grass })
+hex.data # => { terrain: :grass }
 ```
+
+The payload remains owned by the caller, so synchronize access if you share and mutate it across threads.
 
 ### ==, eql?, hash
 Coordinate-based equality and hashing, suitable for hash keys and set semantics.
@@ -234,39 +231,8 @@ a == b    # true
 path = grid.bfs_path(source, target)
 grid.to_pic("bfs_path", orientation: :pointy_topped, path: path)
 ```
-- Each hex uses built-in default colors unless you supply an `image_config` hash. Override per hex:
-```ruby
-config = {
-  hexagon: { color: "#FFFACD", stroke_color: "#222222" },
-  text:    { color: "#333333", stroke_color: "none", font_size: 24 }
-}
-hex = Rhex::AxialHex.new(0, 0, image_config: config)
-[hex].to_grid.to_pic("custom_hex")
-```
-
 ### Font selection
 Rhex ships with a bundled Inconsolata font (`fonts/Inconsolata-Regular.ttf`) and always uses it when rendering text. Custom fonts are intentionally not supported; attempting to set a custom font path raises an error.
-
-## Image configuration files
-`Rhex::ImageConfigs.load!(path)` reads every `*_config.yml` in the given directory and stores each one under a normalized key (e.g., `:path` for `path_image_config.yml`). Look configs up with `Rhex::ImageConfigs.image_config_for(:path)`. Each config is a symbol-keyed `Hash`, so the renderer reads nested keys like `config[:hexagon][:color]`, `config[:hexagon][:stroke_color]`, and `config[:text][:font_size]`.
-
-Example YAML (`path_image_config.yml`):
-```yaml
-hexagon:
-  color: "#B3D5E6"
-  stroke_color: "#B3B3B3"
-text:
-  color: "#000000"
-  stroke_color: "none"
-  font_size: 32
-```
-Usage:
-```ruby
-Rhex::ImageConfigs.load!(Rhex.root.join("config", "images"))
-source = Rhex::AxialHex.new(0, 0, image_config: Rhex::ImageConfigs.image_config_for(:source))
-grid   = [source].to_grid
-grid.to_pic("with_configs")
-```
 
 ## Performance
 

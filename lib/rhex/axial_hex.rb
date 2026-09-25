@@ -2,12 +2,12 @@
 
 module Rhex
   class AxialHex < CubeHex
-    def initialize(q, r, data: nil, image_config: nil)
-      super(q, r, -q - r, data: data, image_config: image_config)
+    def initialize(q, r, data: nil)
+      super(q, r, -q - r, data: data)
     end
 
     def to_cube
-      CubeHex.new(q, r, s, data: data, image_config: image_config)
+      CubeHex.new(q, r, s, data: data)
     end
   end
 end

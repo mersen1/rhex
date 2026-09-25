@@ -16,6 +16,7 @@ module Rhex
       @grid_algorithms = grid_algorithms
       @mutex = Mutex.new
       @hash = {}
+      @snapshot_hash = nil
 
       return if hexes.nil?
 
@@ -23,19 +24,14 @@ module Rhex
     end
 
     def add(hex)
-      # Oriented grids store hexes wrapped in a screen-coordinate decorator; such a hex is still a
-      # hex and must survive a round-trip back into a grid (`to_grid`, `merge`, `to_pic`).
-      unless hex.is_a?(Rhex::CubeHex) || hex.is_a?(Rhex::Decorators::BaseOrientedHex)
-        raise(
-          ArgumentError,
-          "Only Rhex::CubeHex or Rhex::AxialHex instances can be added to the grid, got: #{hex.class}"
-        )
-      end
-
+      validate_hex!(hex)
       packed_key = key(hex)
       prepared = prepare_hex(hex)
 
-      @mutex.synchronize { @hash[packed_key] = prepared }
+      @mutex.synchronize do
+        @hash[packed_key] = prepared
+        @snapshot_hash = nil
+      end
       self
     end
     alias_method :<<, :add
@@ -50,22 +46,29 @@ module Rhex
     end
 
     def merge(other)
-      if other.instance_of?(self.class)
-        incoming = other.send(:snapshot)
-        @mutex.synchronize { @hash.update(incoming) }
-      else
-        # Goes through #add so subclasses (see Concerns::OrientedGrid) still decorate their hexes.
-        other.each { |hex| add(hex) }
+      incoming =
+        if instance_of?(Rhex::Grid) && other.instance_of?(Rhex::Grid)
+          other.send(:snapshot)
+        else
+          other.each_with_object({}) do |hex, entries|
+            validate_hex!(hex)
+            entries[key(hex)] = prepare_hex(hex)
+          end
+        end
+
+      @mutex.synchronize do
+        @hash.update(incoming)
+        @snapshot_hash = nil
       end
 
       self
     end
 
-    # Single-key reads are left unsynchronized on purpose: one Hash lookup cannot observe a
-    # half-applied write under the GVL, and taking the mutex here doubles the cost of the hottest
-    # path in the library. Only bulk reads (#each, #to_a, #snapshot) need the lock.
+    # All reads use the same mutex as writes. This keeps the contract valid on Ruby runtimes
+    # without MRI's GVL and makes #merge visible as one update.
     def include?(hex)
-      @hash.key?(key(hex))
+      packed_key = key(hex)
+      @mutex.synchronize { @hash.key?(packed_key) }
     end
 
     def exclude?(hex)
@@ -73,7 +76,7 @@ module Rhex
     end
 
     def size
-      @hash.size
+      @mutex.synchronize { @hash.size }
     end
     alias_method :length, :size
 
@@ -102,15 +105,18 @@ module Rhex
       dq, dr = Rhex::Constants::AXIAL_NEIGHBOR_DELTAS[direction_index] ||
         raise(Rhex::DirectionIndexOutOfRange)
 
-      @hash[CoordinatePacker.pack(hex.q + dq, hex.r + dr)]
+      packed_key = CoordinatePacker.pack(hex.q + dq, hex.r + dr)
+      @mutex.synchronize { @hash[packed_key] }
     end
 
     def neighbors(hex)
       q = hex.q
       r = hex.r
 
-      Rhex::Constants::AXIAL_NEIGHBOR_DELTAS.filter_map do |dq, dr|
-        @hash[CoordinatePacker.pack(q + dq, r + dr)]
+      @mutex.synchronize do
+        Rhex::Constants::AXIAL_NEIGHBOR_DELTAS.filter_map do |dq, dr|
+          @hash[CoordinatePacker.pack(q + dq, r + dr)]
+        end
       end
     end
 
@@ -135,7 +141,8 @@ module Rhex
     end
 
     def fetch(hex)
-      @hash[key(hex)]
+      packed_key = key(hex)
+      @mutex.synchronize { @hash[packed_key] }
     end
     alias_method :[], :fetch
 
@@ -143,7 +150,7 @@ module Rhex
 
     # Immutable view of the store: taken under the lock, handed to algorithms and iterators.
     def snapshot
-      @mutex.synchronize { @hash.dup }
+      @mutex.synchronize { @snapshot_hash ||= @hash.dup.freeze }
     end
 
     private
@@ -151,6 +158,16 @@ module Rhex
     # Overridden by Concerns::OrientedGrid to wrap hexes in a screen-coordinate decorator.
     def prepare_hex(hex)
       hex
+    end
+
+    def validate_hex!(hex)
+      # Decorated hexes must survive a round-trip through #to_grid and #merge.
+      return if hex.is_a?(Rhex::CubeHex) || hex.is_a?(Rhex::Decorators::BaseOrientedHex)
+
+      raise(
+        ArgumentError,
+        "Only Rhex::CubeHex or Rhex::AxialHex instances can be added to the grid, got: #{hex.class}"
+      )
     end
 
     def key(hex)

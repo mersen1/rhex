@@ -53,9 +53,10 @@ module Rhex
     private_constant :MinHeap
 
     def initialize(grid_hash, obstacles: [], grid_algorithms: GridAlgorithms::INSTANCE)
-      @grid_hash = grid_hash
-      @obstacles = obstacles
+      @grid_hash = grid_hash.frozen? ? grid_hash : grid_hash.dup.freeze
+      @obstacles = Array(obstacles).dup.freeze
       @grid_algorithms = grid_algorithms
+      freeze
     end
 
     def call(source, target)

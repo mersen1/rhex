@@ -5,6 +5,7 @@ require "spec_helper"
 RSpec.describe(Rhex::AstarPath) do
   include AxialHexHelpers
   include GridHelpers
+  include ImageConfigs
 
   let(:grid_algorithms) { Rhex::GridAlgorithms::INSTANCE }
 
@@ -23,17 +24,14 @@ RSpec.describe(Rhex::AstarPath) do
       expect(astar_path).to(eq(expected_shortest_path))
       expect(astar_path.length).to(eq(bfs_path.length))
 
-      image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
-      Rhex::ImageConfigs.load!(image_configs_path)
-
       # Use hexes from grid to ensure we have the correct objects
       path_hexes = astar_path.map { |hex| grid.fetch(hex) }
-      path_hexes.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
+      with_image_config(path_hexes, :path)
 
       source_hex = grid.fetch(source)
       target_hex = grid.fetch(target)
-      source_hex.image_config = Rhex::ImageConfigs.image_config_for(:source)
-      target_hex.image_config = Rhex::ImageConfigs.image_config_for(:target)
+      with_image_config(source_hex, :source)
+      with_image_config(target_hex, :target)
 
       grid.merge(path_hexes)
         .merge([source_hex, target_hex])
@@ -41,12 +39,6 @@ RSpec.describe(Rhex::AstarPath) do
     end
 
     context "when obstacles are defined" do
-      before do
-        image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
-
-        Rhex::ImageConfigs.load!(image_configs_path)
-      end
-
       it "finds the shortest path around obstacles", aggregate_failure: true do
         grid = grid(3)
         source = Rhex::AxialHex.new(0, 0)
@@ -55,7 +47,7 @@ RSpec.describe(Rhex::AstarPath) do
         obstacles =
           coords_to_hexes([
             [1, 0], [1, -1],
-          ], image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
+          ], image_config: image_config_for(:obstacle))
 
         astar_path =
           described_class.new(grid_hash(grid), obstacles: obstacles, grid_algorithms: grid_algorithms).call(source,
@@ -66,12 +58,12 @@ RSpec.describe(Rhex::AstarPath) do
 
         # Use hexes from grid to ensure we have the correct objects
         path_hexes = astar_path.map { |hex| grid.fetch(hex) }
-        path_hexes.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
+        with_image_config(path_hexes, :path)
 
         source_hex = grid.fetch(source)
         target_hex = grid.fetch(target)
-        source_hex.image_config = Rhex::ImageConfigs.image_config_for(:source)
-        target_hex.image_config = Rhex::ImageConfigs.image_config_for(:target)
+        with_image_config(source_hex, :source)
+        with_image_config(target_hex, :target)
 
         grid.merge(obstacles)
           .merge(path_hexes)

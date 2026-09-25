@@ -5,6 +5,7 @@ require "spec_helper"
 RSpec.describe(Rhex::DfsPath) do
   include AxialHexHelpers
   include GridHelpers
+  include ImageConfigs
 
   let(:grid_algorithms) { Rhex::GridAlgorithms::INSTANCE }
 
@@ -27,33 +28,25 @@ RSpec.describe(Rhex::DfsPath) do
       expect(dfs_path.all? { |hex| grid.include?(hex) }).to(be(true))
       expect(bfs_path.each_cons(2).all? { |a, b| a.distance(b) == 1 }).to(be(true))
 
-      image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
-      Rhex::ImageConfigs.load!(image_configs_path)
-
       # Use hexes from grid to ensure we have the correct objects
       dfs_path_hexes = dfs_path.map { |hex| grid.fetch(hex) }
-      dfs_path_hexes.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
+      with_image_config(dfs_path_hexes, :path)
 
       source_hex = grid.fetch(source)
       target_hex = grid.fetch(target)
-      source_hex.image_config = Rhex::ImageConfigs.image_config_for(:source)
-      target_hex.image_config = Rhex::ImageConfigs.image_config_for(:target)
+      with_image_config(source_hex, :source)
+      with_image_config(target_hex, :target)
 
       grid.merge(dfs_path_hexes).merge([source_hex, target_hex])
         .to_pic("dfs_path", orientation: :pointy_topped, path: dfs_path_hexes)
     end
 
     context "when obstacles are defined" do
-      before do
-        image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
-        Rhex::ImageConfigs.load!(image_configs_path)
-      end
-
       it "avoids obstacles with a deterministic path" do
         grid = grid(3)
         source = Rhex::AxialHex.new(0, 0)
         target = Rhex::AxialHex.new(2, -1)
-        obstacles = coords_to_hexes([[1, 0], [1, -1]], image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
+        obstacles = coords_to_hexes([[1, 0], [1, -1]], image_config: image_config_for(:obstacle))
 
         path = described_class.new(grid_hash(grid), obstacles: obstacles, grid_algorithms: grid_algorithms).call(
           source, target
@@ -61,12 +54,12 @@ RSpec.describe(Rhex::DfsPath) do
 
         # Use hexes from grid to ensure we have the correct objects
         path_hexes = path.map { |hex| grid.fetch(hex) }
-        path_hexes.each { |hex| hex.image_config ||= Rhex::ImageConfigs.image_config_for(:path) }
+        with_image_config(path_hexes, :path)
 
         source_hex = grid.fetch(source)
         target_hex = grid.fetch(target)
-        source_hex.image_config = Rhex::ImageConfigs.image_config_for(:source)
-        target_hex.image_config = Rhex::ImageConfigs.image_config_for(:target)
+        with_image_config(source_hex, :source)
+        with_image_config(target_hex, :target)
 
         grid.merge(obstacles)
           .merge(path_hexes)

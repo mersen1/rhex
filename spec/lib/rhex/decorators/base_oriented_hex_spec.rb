@@ -7,7 +7,7 @@ RSpec.describe(Rhex::Decorators::BaseOrientedHex) do
 
   describe "#coordinates" do
     it "raises NotImplementedError when coordinate_x is not implemented" do
-      expect { described_class.new(hex, size: 2).coordinates }
+      expect { described_class.new(hex, size: 2) }
         .to(raise_error(NotImplementedError, /coordinate_x/))
     end
 
@@ -16,7 +16,7 @@ RSpec.describe(Rhex::Decorators::BaseOrientedHex) do
         def coordinate_x = 0
       end
 
-      expect { subclass.new(hex, size: 2).coordinates }
+      expect { subclass.new(hex, size: 2) }
         .to(raise_error(NotImplementedError, /coordinate_y/))
     end
   end

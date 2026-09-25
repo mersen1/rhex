@@ -25,14 +25,17 @@ module Rhex
         @from = from
         @to = to
         @config = config
+        freeze
       end
 
       def call
-        angle = Math.atan2(to.coordinates.y - from.coordinates.y, to.coordinates.x - from.coordinates.x)
+        from_center = from.coordinates
+        to_center = to.coordinates
+        angle = Math.atan2(to_center.y - from_center.y, to_center.x - from_center.x)
 
         # Center the arrow on the edge between the two hexes (their midpoint).
-        mid_x = (from.coordinates.x + to.coordinates.x) / 2.0
-        mid_y = (from.coordinates.y + to.coordinates.y) / 2.0
+        mid_x = (from_center.x + to_center.x) / 2.0
+        mid_y = (from_center.y + to_center.y) / 2.0
 
         half = (from.size * config[:length_ratio]) / 2.0
         tail_x = mid_x - (Math.cos(angle) * half)

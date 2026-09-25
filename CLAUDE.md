@@ -26,20 +26,19 @@ bundle exec rubocop       # lint (rubocop-shopify base config)
 ## Architecture
 
 ### Coordinate model
-- `Rhex::CubeHex` is the canonical hex: stores `q`, `r`, `s` plus optional `data` payload and
-  `image_config` (validated by `Contracts::ImageConfigContract`). Equality and `hash` are
-  coordinate-based, so hexes work as set members / hash keys.
+- `Rhex::CubeHex` is the canonical hex: stores `q`, `r`, `s` plus optional `data` payload.
+  Equality and `hash` are coordinate-based, so hexes work as set members / hash keys.
 - `Rhex::AxialHex` is a lightweight `(q, r)` form; convert with `to_cube` / `to_axial`.
-- Every hex precomputes a `packed_key`: `(q << 32) | (r & 0xFFFFFFFF)` (see `CoordinatePacker.pack`).
-  This single 64-bit integer is the hash key used everywhere for O(1) lookups — `s` is not part of the key.
+- Every hex precomputes a `packed_key` (see `CoordinatePacker.pack`). Coordinates in the signed
+  32-bit range use `(q << 32) | (r & 0xFFFFFFFF)`; larger coordinates use a collision-free integer
+  pairing in a separate key range. `s` is not part of the key.
 
 ### Grid as a coordinate-keyed store
 - `Rhex::Grid` wraps a `@hash` keyed by `packed_key`. `add`/`<<`/`merge` overwrite by coordinate;
-  `include?`, `size`, `to_a` give set-like semantics. Writes and bulk reads (`each`, `to_a`,
-  `snapshot`) are guarded by a `Mutex`; `each` iterates a snapshot, so the lock is never held while a
-  caller's block runs and mutating from inside `each` is safe. Single-key reads (`fetch`, `include?`,
-  `size`) stay lock-free deliberately — see the comment above `Grid#include?`. Subclasses hook into
-  storage through the private `prepare_hex`, not by overriding `add`.
+  `include?`, `size`, `to_a` give set-like semantics. All reads and writes are guarded by a
+  `Mutex`; `merge` publishes its full update at once. `each` iterates a snapshot, so the lock is
+  never held while a caller's block runs. The frozen snapshot is reused until a write invalidates
+  it. Subclasses hook into storage through the private `prepare_hex`, not by overriding `add`.
 - `Enumerable#to_grid` (monkey-patched) turns any hex collection into a `Grid`. It lives in
   `lib/rhex.rb`, not in `grid.rb` — Zeitwerk would otherwise only define it once `Rhex::Grid` is referenced.
 
@@ -52,8 +51,8 @@ delegates to it. The grid takes a `grid_algorithms:` collaborator (default: the 
 `GridAlgorithms` holds the shared primitives: `hex_distance`, `line_blocked?` (line-of-sight),
 `obstacle_packed_key_set`, and `reconstruct_path_from_parents`.
 
-When calling a grid algorithm, the grid takes a **snapshot** (`@hash.dup` under the mutex) and passes
-it to a fresh algorithm instance — algorithms operate on an immutable view, never the live grid.
+When calling a grid algorithm, the grid takes a **snapshot** (cached `@hash.dup` under the mutex) and passes
+it to a fresh, frozen algorithm instance. Each call keeps its traversal state in local variables.
 To test or swap behavior, pass a custom object via `Grid.new(hexes, grid_algorithms:)`.
 
 ### Path-finding semantics (shared error contract)
@@ -75,6 +74,6 @@ when endpoints are missing, and `Grid::PathNotFoundError` when unreachable.
 ### Autoloading & conventions
 - Files are autoloaded by Zeitwerk (`Zeitwerk::Loader.for_gem.setup` in `lib/rhex.rb`) — directory
   structure must match the module nesting (`lib/rhex/draw/arrow.rb` → `Rhex::Draw::Arrow`).
-- Image configs are loaded from `*_config.yml` files via `ImageConfigs.load!(dir)` and fetched with
-  `ImageConfigs.image_config_for(:key)` (filename `path_image_config.yml` → key `:path`).
+- Test-only image configs live in `spec/support/image_configs.rb`. Include `ImageConfigs`
+  in an RSpec group and call `image_config_for(:path)` or `with_image_config(hex, :path)`.
 - Source comments are in English — keep it that way.

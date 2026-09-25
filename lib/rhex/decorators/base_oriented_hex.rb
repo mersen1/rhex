@@ -9,13 +9,10 @@ module Rhex
       def initialize(obj, size:)
         super(obj)
         @size = size
+        @coordinates = Coordinates.new(x: coordinate_x, y: coordinate_y).freeze
       end
 
-      attr_reader :size
-
-      def coordinates
-        @coordinates ||= Coordinates.new(x: coordinate_x, y: coordinate_y)
-      end
+      attr_reader :size, :coordinates
 
       def radius
         (2.0 / Math.sqrt(3)) * size

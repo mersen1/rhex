@@ -8,26 +8,15 @@ module Rhex
       (stop * t) + (start * (1.0 - t))
     end
 
-    attr_reader :q, :r, :s, :data, :packed_key, :image_config
+    attr_reader :q, :r, :s, :data, :packed_key
 
-    def initialize(q, r, s, data: nil, image_config: nil)
+    def initialize(q, r, s, data: nil)
       @q = q
       @r = r
       @s = s
       @data = data
       # Intermediate hexes (lerp results, medians) may carry Floats — those have no packed key.
       @packed_key = CoordinatePacker.pack_unchecked(q, r) if q.is_a?(Integer) && r.is_a?(Integer)
-
-      self.image_config = image_config
-    end
-
-    def image_config=(value)
-      return @image_config = nil unless value
-
-      validation = Rhex::Contracts::ImageConfigContract.new.call(value)
-      validation.failure? && raise(ArgumentError, "Invalid image_config: #{validation.errors.to_h}")
-
-      @image_config = validation.to_h
     end
 
     def hash
@@ -46,7 +35,7 @@ module Rhex
     # --- Arithmetic (replaces add/subtract/scale) ---
 
     # Arithmetic carries the left operand payload over: derived hexes (neighbors, rings, lines)
-    # keep the same data/image_config as the hex they came from.
+    # keep the same data as the hex they came from.
     def +(other)
       derive(q + other.q, r + other.r, s + other.s)
     end
@@ -136,7 +125,7 @@ module Rhex
     def reflection_s(ref = Rhex::CubeHex.new(0, 0, 0)) = with_reflection(ref) { [_1.r, _1.q, _1.s] }
 
     def to_axial
-      Rhex::AxialHex.new(q, r, data: data, image_config: image_config)
+      Rhex::AxialHex.new(q, r, data: data)
     end
 
     # --- Protected / Private Helpers ---
@@ -164,7 +153,7 @@ module Rhex
     private
 
     def derive(new_q, new_r, new_s)
-      Rhex::CubeHex.new(new_q, new_r, new_s, data: data, image_config: image_config)
+      Rhex::CubeHex.new(new_q, new_r, new_s, data: data)
     end
 
     # Cube rounding: the coordinate with the largest error is recomputed from the other two

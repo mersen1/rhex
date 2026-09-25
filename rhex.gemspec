@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.required_ruby_version = ">= 3.3.7"
 
   s.add_dependency("dry-validation", "~> 1.11")
-  s.add_dependency("rgl", "~> 0.6")
   s.add_dependency("rmagick", "~> 6.0")
   s.add_dependency("zeitwerk", "~> 2.6")
 

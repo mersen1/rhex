@@ -11,29 +11,29 @@ module Rhex
       end
 
       def q_max
-        @q_max ||= q_map.max
+        q_map.max
       end
 
       def q_min
-        @q_min ||= q_map.min
+        q_map.min
       end
 
       def r_max
-        @r_max ||= r_map.max
+        r_map.max
       end
 
       def r_min
-        @r_min ||= r_map.min
+        r_map.min
       end
 
       private
 
       def q_map
-        @q_map ||= to_a.map(&:q).sort
+        to_a.map(&:q).sort
       end
 
       def r_map
-        @r_map ||= to_a.map(&:r).sort
+        to_a.map(&:r).sort
       end
 
       def median(array)
