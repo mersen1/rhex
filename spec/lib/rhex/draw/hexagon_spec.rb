@@ -3,6 +3,8 @@
 require "spec_helper"
 
 RSpec.describe(Rhex::Draw::Hexagon) do
+  include ImageConfigs
+
   let(:hex) { Rhex::Decorators::FlatToppedHex.new(Rhex::AxialHex.new(0, 0), size: 2) }
   let(:gc) do
     instance_double(
@@ -69,7 +71,7 @@ RSpec.describe(Rhex::Draw::Hexagon) do
         text: { color: "#123", stroke_color: "#321", font_size: 10 },
       }
 
-      hex.image_config = custom_config
+      with_image_config(hex, custom_config)
       allow(gc).to(receive(:fill))
       allow(gc).to(receive(:stroke))
       allow(gc).to(receive(:polygon))

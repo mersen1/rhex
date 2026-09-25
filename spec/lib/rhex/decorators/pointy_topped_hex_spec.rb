@@ -22,6 +22,6 @@ RSpec.describe(Rhex::Decorators::PointyToppedHex) do
 
     expect(coordinates.x).to(be_within(1e-6).of((24.0 / Math.sqrt(3))))
     expect(coordinates.y).to(eq(12.0))
-    expect(decorated_hex.coordinates).to(be(coordinates)) # memoized
+    expect(decorated_hex.coordinates).to(be(coordinates)) # precomputed
   end
 end

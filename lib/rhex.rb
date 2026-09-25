@@ -2,7 +2,6 @@
 
 require "dry/validation"
 require "zeitwerk"
-require "yaml"
 require "delegate"
 require "forwardable"
 require "pathname"
@@ -12,6 +11,8 @@ Zeitwerk::Loader.for_gem.setup
 
 module Rhex
   DirectionIndexOutOfRange = Class.new(StandardError)
+  FONT_PATH_MUTEX = Mutex.new
+  private_constant :FONT_PATH_MUTEX
 
   class << self
     def root
@@ -23,11 +24,14 @@ module Rhex
     end
 
     def font_path
-      @font_path ||= Pathname.new(root.join("fonts", "Inconsolata-Regular.ttf")).to_s
+      FONT_PATH_MUTEX.synchronize do
+        @font_path ||= Pathname.new(root.join("fonts", "Inconsolata-Regular.ttf")).to_s.freeze
+      end
     end
 
     def font_path=(value)
-      @font_path = Pathname.new(value).to_s
+      path = Pathname.new(value).to_s.freeze
+      FONT_PATH_MUTEX.synchronize { @font_path = path }
     end
   end
 end

@@ -4,13 +4,8 @@ require "spec_helper"
 
 RSpec.describe(Rhex::CubeHex) do
   include GridHelpers
+  include ImageConfigs
   include AxialHexHelpers
-
-  before do
-    image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
-
-    Rhex::ImageConfigs.load!(image_configs_path)
-  end
 
   describe "#spiral_ring" do
     it "returns a spiral list of hexagons" do
@@ -57,7 +52,7 @@ RSpec.describe(Rhex::CubeHex) do
       target = Rhex::AxialHex.new(4, -2)
 
       path = source.linedraw(target)
-      path.each { _1.image_config = Rhex::ImageConfigs.image_config_for(:path) }
+      with_image_config(path, :path)
       path.to_grid.to_pic("linedraw")
 
       expect(path)
@@ -184,30 +179,20 @@ RSpec.describe(Rhex::CubeHex) do
   end
 
   describe "payload propagation" do
-    let(:image_config) { Rhex::ImageConfigs.image_config_for(:path) }
-    let(:hex) { Rhex::AxialHex.new(0, 0, data: :payload, image_config: image_config) }
+    let(:hex) { Rhex::AxialHex.new(0, 0, data: :payload) }
 
-    it "keeps data and image_config in arithmetic results" do
+    it "keeps data in arithmetic results" do
       derived = hex + Rhex::CubeHex.new(1, 0, -1)
 
       expect(derived.data).to(eq(:payload))
-      expect(derived.image_config).to(eq(hex.image_config))
       expect((hex - Rhex::CubeHex.new(1, 0, -1)).data).to(eq(:payload))
       expect((hex * 2).data).to(eq(:payload))
     end
 
-    it "keeps data and image_config in derived hexes" do
+    it "keeps data in derived hexes" do
       derived = hex.spiral_ring(2) + hex.neighbors + hex.linedraw(Rhex::AxialHex.new(3, 0))
 
       expect(derived.map(&:data).uniq).to(eq([:payload]))
-      expect(derived.map(&:image_config).uniq).to(eq([hex.image_config]))
-    end
-  end
-
-  describe "#image_config=" do
-    it "raises a prefixed error for an invalid config" do
-      expect { Rhex::AxialHex.new(0, 0, image_config: { hexagon: {} }) }
-        .to(raise_error(ArgumentError, /\AInvalid image_config: /))
     end
   end
 end

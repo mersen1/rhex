@@ -16,31 +16,36 @@ module Rhex
 
     DEFAULT_ORIENTATION = FLAT_TOPPED
     DEFAULT_HEX_SIZE = 64
+    WRITE_MUTEX = Mutex.new
+    private_constant :WRITE_MUTEX
 
     def initialize(grid, hex_size: DEFAULT_HEX_SIZE, orientation: DEFAULT_ORIENTATION, path: nil)
       oriented_grid_class = Object.const_get(ORIENTED_GRIDS_MAPPER.fetch(orientation))
       oriented_grid = grid.to_grid(oriented_grid_class, hex_size: hex_size)
 
       @grid = oriented_grid
-      @path = path
+      @path = path&.dup&.freeze
       @canvas_markup = Rhex::CanvasMarkups::AutoCanvasMarkup.new(oriented_grid)
+      freeze
     end
 
     def call(filename)
+      gc = build_gc
+      imgl = build_image
       gc.translate(center.x, center.y)
 
       grid.each { |hex| Draw::Hexagon.new(gc: gc, hex: hex).call }
 
-      draw_path_arrows
+      draw_path_arrows(gc)
 
-      draw_and_save(filename)
+      draw_and_save(filename, gc, imgl)
     end
 
     private
 
     attr_reader :grid, :path, :canvas_markup
 
-    def draw_path_arrows
+    def draw_path_arrows(gc)
       return if path.nil?
 
       # Dropping a missing hex silently would join its neighbours in #each_cons and draw one long
@@ -61,29 +66,25 @@ module Rhex
     def_delegators :canvas_markup, :cols
     def_delegators :canvas_markup, :rows
 
-    def draw_and_save(filename)
+    def draw_and_save(filename, gc, imgl)
       gc.draw(imgl)
       safe_filename = sanitize_filename(filename)
-      imgl.write(Rhex.root.join("images", "#{safe_filename}.png").to_s)
+      WRITE_MUTEX.synchronize do
+        imgl.write(Rhex.root.join("images", "#{safe_filename}.png").to_s)
+      end
     end
 
-    def imgl
-      @imgl ||=
-        begin
-          imgl = Magick::ImageList.new
-          imgl.new_image(cols, rows, Magick::HatchFill.new("transparent", "lightcyan2"))
-          imgl
-        end
+    def build_image
+      imgl = Magick::ImageList.new
+      imgl.new_image(cols, rows, Magick::HatchFill.new("transparent", "lightcyan2"))
+      imgl
     end
 
-    def gc
-      @gc ||=
-        begin
-          gc = Magick::Draw.new
-          gc.font = Rhex.font_path
-          gc.text_align(Magick::CenterAlign)
-          gc
-        end
+    def build_gc
+      gc = Magick::Draw.new
+      gc.font = Rhex.font_path
+      gc.text_align(Magick::CenterAlign)
+      gc
     end
 
     def sanitize_filename(filename)

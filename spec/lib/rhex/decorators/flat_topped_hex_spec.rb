@@ -22,6 +22,6 @@ RSpec.describe(Rhex::Decorators::FlatToppedHex) do
 
     expect(coordinates.x).to(be_within(1e-10).of(9.0))
     expect(coordinates.y).to(be_within(1e-10).of(0.0))
-    expect(decorated_hex.coordinates).to(be(coordinates)) # memoized
+    expect(decorated_hex.coordinates).to(be(coordinates)) # precomputed
   end
 end

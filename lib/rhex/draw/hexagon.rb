@@ -40,11 +40,13 @@ module Rhex
 
             validation.to_h
           end
+        freeze
       end
 
       def call
-        draw_hexagon(image_config[:hexagon])
-        draw_text(image_config[:text])
+        config = image_config
+        draw_hexagon(config[:hexagon])
+        draw_text(config[:text])
       end
 
       private
@@ -54,6 +56,8 @@ module Rhex
       def_delegators :hex, :coordinates
 
       def image_config
+        return default_image_config unless hex.respond_to?(:image_config)
+
         hex.image_config || default_image_config
       end
 
@@ -61,7 +65,7 @@ module Rhex
         gc.fill(config[:color])
 
         gc.stroke(config[:stroke_color])
-        gc.polygon(*polygon_coordinates)
+        gc.polygon(*polygon_coordinates(config))
       end
 
       def draw_text(config)
@@ -69,27 +73,24 @@ module Rhex
         gc.stroke(config[:stroke_color])
         gc.font_size(config[:font_size])
 
+        center = coordinates
         gc.text(
-          coordinates.x, coordinates.y + (config[:font_size] / Math::PI),
+          center.x, center.y + (config[:font_size] / Math::PI),
           "#{hex.q},#{hex.r}"
         )
       end
 
-      def polygon_coordinates
-        @polygon_coordinates ||= begin
-          angles_in_radians = hex.class::ANGLES.map { |angle| angle * Rhex::Constants::DEG_TO_RAD }
+      def polygon_coordinates(config)
+        angles_in_radians = hex.class::ANGLES.map { |angle| angle * Rhex::Constants::DEG_TO_RAD }
+        center = coordinates
+        size = config[:size] || hex.size
 
-          angles_in_radians.flat_map do |angle_rad|
-            [
-              coordinates.x + (hexagon_size * Math.cos(angle_rad)),
-              coordinates.y + (hexagon_size * Math.sin(angle_rad)),
-            ]
-          end
+        angles_in_radians.flat_map do |angle_rad|
+          [
+            center.x + (size * Math.cos(angle_rad)),
+            center.y + (size * Math.sin(angle_rad)),
+          ]
         end
-      end
-
-      def hexagon_size
-        image_config[:hexagon][:size] || hex.size
       end
     end
   end

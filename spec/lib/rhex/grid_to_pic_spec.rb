@@ -43,6 +43,17 @@ RSpec.describe(Rhex::GridToPic) do
       described_class.new(hex_grid, hex_size: 2).call("example")
     end
 
+    it "creates fresh drawing objects for each call" do
+      renderer = described_class.new(hex_grid, hex_size: 2)
+
+      renderer.call("first")
+      renderer.call("second")
+
+      expect(renderer).to(be_frozen)
+      expect(Magick::Draw).to(have_received(:new).twice)
+      expect(Magick::ImageList).to(have_received(:new).twice)
+    end
+
     it "draws direction arrows along the given path" do
       hex_grid = grid(1)
       path = [Rhex::AxialHex.new(0, 0), Rhex::AxialHex.new(1, 0)]

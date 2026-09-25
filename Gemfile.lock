@@ -3,7 +3,6 @@ PATH
   specs:
     rhex (3.3.3)
       dry-validation (~> 1.11)
-      rgl (~> 0.6)
       rmagick (~> 6.0)
       zeitwerk (~> 2.6)
 
@@ -55,7 +54,6 @@ GEM
     logger (1.7.0)
     method_source (1.0.0)
     observer (0.1.2)
-    pairing_heap (3.1.0)
     parallel (1.22.1)
     parser (3.1.2.0)
       ast (~> 2.4.1)
@@ -71,10 +69,6 @@ GEM
     rake (13.3.1)
     regexp_parser (2.5.0)
     rexml (3.2.5)
-    rgl (0.6.6)
-      pairing_heap (>= 0.3, < 4.0)
-      rexml (~> 3.2, >= 3.2.4)
-      stream (~> 0.5.3)
     rmagick (6.0.1)
       observer (~> 0.1)
       pkg-config (~> 1.4)
@@ -111,7 +105,6 @@ GEM
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.12.3)
     simplecov_json_formatter (0.1.4)
-    stream (0.5.5)
     unicode-display_width (2.1.0)
     zeitwerk (2.7.3)
 

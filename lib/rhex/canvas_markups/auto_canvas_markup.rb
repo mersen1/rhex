@@ -11,62 +11,57 @@ module Rhex
 
       def initialize(grid)
         @grid = Rhex::Decorators::GridWithMarkup.new(grid)
-      end
-
-      def width
-        @width ||= span_with_stroke(bounding_box[:x_max] - bounding_box[:x_min])
-      end
-      alias_method :cols, :width
-
-      def height
-        @height ||= span_with_stroke(bounding_box[:y_max] - bounding_box[:y_min])
-      end
-      alias_method :rows, :height
-
-      def center
-        @center ||= Center.new(
+        @bounding_box = calculate_bounding_box.freeze
+        @width = span_with_stroke(bounding_box[:x_max] - bounding_box[:x_min])
+        @height = span_with_stroke(bounding_box[:y_max] - bounding_box[:y_min])
+        bounding_center = calculate_bounding_center
+        @center = Center.new(
           x: (cols / 2.0) - bounding_center.x,
           y: (rows / 2.0) - bounding_center.y
         ).freeze
+        freeze
       end
+
+      attr_reader :width, :height, :center
+      alias_method :cols, :width
+      alias_method :rows, :height
 
       private
 
-      attr_reader :grid
+      attr_reader :grid, :bounding_box
 
       def_delegators :grid, :hex_size
 
-      def bounding_center
-        @bounding_center ||= Center.new(
+      def calculate_bounding_center
+        Center.new(
           x: (x_min_with_stroke + x_max_with_stroke) / 2.0,
           y: (y_min_with_stroke + y_max_with_stroke) / 2.0
         )
       end
 
-      def bounding_box
-        @bounding_box ||= begin
-          x_min = Float::INFINITY
-          x_max = -Float::INFINITY
-          y_min = Float::INFINITY
-          y_max = -Float::INFINITY
+      def calculate_bounding_box
+        x_min = Float::INFINITY
+        x_max = -Float::INFINITY
+        y_min = Float::INFINITY
+        y_max = -Float::INFINITY
 
-          grid.to_a.each do |hex|
-            half_width = hex.width / 2.0
-            half_height = hex.height / 2.0
+        grid.to_a.each do |hex|
+          half_width = hex.width / 2.0
+          half_height = hex.height / 2.0
+          center = hex.coordinates
 
-            xlo = hex.coordinates.x - half_width
-            xhi = hex.coordinates.x + half_width
-            ylo = hex.coordinates.y - half_height
-            yhi = hex.coordinates.y + half_height
+          xlo = center.x - half_width
+          xhi = center.x + half_width
+          ylo = center.y - half_height
+          yhi = center.y + half_height
 
-            x_min = xlo if xlo < x_min
-            x_max = xhi if xhi > x_max
-            y_min = ylo if ylo < y_min
-            y_max = yhi if yhi > y_max
-          end
-
-          { x_min: x_min, x_max: x_max, y_min: y_min, y_max: y_max }
+          x_min = xlo if xlo < x_min
+          x_max = xhi if xhi > x_max
+          y_min = ylo if ylo < y_min
+          y_max = yhi if yhi > y_max
         end
+
+        { x_min: x_min, x_max: x_max, y_min: y_min, y_max: y_max }
       end
 
       def span_with_stroke(span)

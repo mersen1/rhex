@@ -4,17 +4,12 @@ require "spec_helper"
 
 RSpec.describe(Rhex::Grid) do
   include GridHelpers
+  include ImageConfigs
   include AxialHexHelpers
 
   let(:hex_a) { Rhex::AxialHex.new(0, 0) }
   let(:hex_b) { Rhex::AxialHex.new(1, 0, data: :payload) }
   let(:grid_algorithms) { Rhex::GridAlgorithms::INSTANCE }
-
-  before do
-    image_configs_path = Rhex.root.join("spec", "fixtures", "image_configs")
-
-    Rhex::ImageConfigs.load!(image_configs_path)
-  end
 
   describe ".[]" do
     it "builds a grid with the provided hexes" do
@@ -44,6 +39,15 @@ RSpec.describe(Rhex::Grid) do
       grid.add(Rhex::AxialHex.new(0, 0, data: :other))
 
       expect(grid.to_a.map(&:data)).to(contain_exactly(:other))
+    end
+
+    it "stores large coordinates without replacing other cells" do
+      distant = Rhex::AxialHex.new(0, 1 << 32)
+      grid = described_class.new([hex_a, distant])
+
+      expect(grid.size).to(eq(2))
+      expect(grid.fetch(hex_a)).to(be(hex_a))
+      expect(grid.fetch(distant)).to(be(distant))
     end
 
     it "raises when the hex has non-integer coordinates" do
@@ -83,6 +87,27 @@ RSpec.describe(Rhex::Grid) do
     end
   end
 
+  describe "#snapshot" do
+    it "reuses a frozen snapshot until the grid changes" do
+      grid = described_class.new([hex_a])
+      original = grid.send(:snapshot)
+
+      expect(original).to(be_frozen)
+      expect(grid.send(:snapshot)).to(be(original))
+
+      grid.add(hex_b)
+      updated = grid.send(:snapshot)
+
+      expect(updated).not_to(be(original))
+      expect(original.values).to(eq([hex_a]))
+      expect(updated.values).to(contain_exactly(hex_a, hex_b))
+
+      grid.merge(described_class.new([Rhex::AxialHex.new(2, 0)]))
+
+      expect(grid.send(:snapshot)).not_to(be(updated))
+    end
+  end
+
   describe "#merge" do
     it "merges another grid" do
       base = described_class.new([hex_a])
@@ -119,6 +144,16 @@ RSpec.describe(Rhex::Grid) do
       oriented.merge([hex_b])
 
       expect(oriented.to_a).to(all(be_a(Rhex::Decorators::FlatToppedHex)))
+    end
+
+    it "redecorates hexes from another oriented grid using the receiver's size" do
+      base = Rhex::FlatToppedGrid.new([hex_a], hex_size: 64)
+      other = Rhex::FlatToppedGrid.new([hex_b], hex_size: 32)
+
+      base.merge(other)
+
+      expect(base.to_a.map(&:size)).to(eq([64, 64]))
+      expect(base.to_a.map(&:__getobj__)).to(all(be_a(Rhex::CubeHex)))
     end
 
     it "accepts hexes coming from an already oriented grid" do
@@ -221,11 +256,11 @@ RSpec.describe(Rhex::Grid) do
     it "returns neighbors inside the grid" do
       hex_grid = grid(2)
       center = Rhex::AxialHex.new(0, 2)
-      center.image_config = Rhex::ImageConfigs.image_config_for(:source)
+      with_image_config(center, :source)
 
       expected_neighbors = coords_to_hexes(
         [[1, 1], [0, 1], [-1, 2]],
-        image_config: Rhex::ImageConfigs.image_config_for(:path)
+        image_config: image_config_for(:path)
       )
 
       hex_grid
@@ -240,17 +275,17 @@ RSpec.describe(Rhex::Grid) do
   describe "#reachable" do
     it "shows reachable hexes" do
       source = Rhex::AxialHex.new(0, 0)
-      source.image_config = Rhex::ImageConfigs.image_config_for(:source)
+      with_image_config(source, :source)
 
       obstacles = coords_to_hexes([
         [1, -1], [2, -1], [2, 0], [2, 1], [1, 2], [0, 2],
         [-1, 2], [-1, 1], [-2, 1], [-1, -1], [0, -2], [1, -3],
-      ], image_config: Rhex::ImageConfigs.image_config_for(:obstacle))
+      ], image_config: image_config_for(:obstacle))
 
       expected_reachable = coords_to_hexes([
         [0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [1, -2],
         [2, -3], [2, -2], [-2, -1], [-3, 0], [-2, 0], [-3, 1],
-      ], image_config: Rhex::ImageConfigs.image_config_for(:path))
+      ], image_config: image_config_for(:path))
 
       hex_grid = square_grid(4)
         .merge(obstacles)
@@ -291,16 +326,16 @@ RSpec.describe(Rhex::Grid) do
   describe "#field_of_view" do
     it "calculates field of view" do
       hex_grid = grid(3)
-      source = Rhex::AxialHex.new(-1, 2, image_config: Rhex::ImageConfigs.image_config_for(:source))
+      source = with_image_config(Rhex::AxialHex.new(-1, 2), :source)
       obstacles = coords_to_hexes(
         [[-1, 1], [-1, 0], [0, -1], [1, -1], [1, 0]],
-        image_config: Rhex::ImageConfigs.image_config_for(:obstacle)
+        image_config: image_config_for(:obstacle)
       )
 
       expect_field_of_view = coords_to_hexes(
         [[0, 0], [0, 1], [1, 1], [0, 2], [-1, 3], [0, 3], [1, 2], [-3, 0], [-3, 1], [-3, 2], [-3, 3],
          [-2, 1], [-2, 2], [-2, 3], [2, 0], [2, 1], [3, 0], [3, -1],],
-        image_config: Rhex::ImageConfigs.image_config_for(:path)
+        image_config: image_config_for(:path)
       )
 
       field_of_view = hex_grid.field_of_view(source, obstacles: obstacles)
