@@ -22,6 +22,17 @@ bundle install
 require "rhex"
 ```
 
+The gem builds a C extension during installation. A source checkout can build it with:
+
+```shell
+cd ext/rhex
+ruby extconf.rb
+make
+cp native_ext.so ../../lib/rhex/native_ext.so
+```
+
+`field_of_view` uses the extension for its line-of-sight loop when available. Without a built extension, it uses the Ruby implementation. To compare both paths on the same grid, run `bundle exec ruby benchmarks/field_of_view_native_benchmark.rb`.
+
 ## Quick start
 ```ruby
 require "rhex"
@@ -270,7 +281,7 @@ grid.to_pic("with_configs")
 
 ## Performance
 
-The gem is **pure Ruby** (no native extension). Pathfinding, FOV, and reachability use a `Rhex::GridAlgorithms` instance injected via `grid_algorithms:` on `Grid.new` (which forwards it to `BfsPath` / `DfsPath` / `AstarPath` / `Reachable` / `FieldOfView`). All default to a frozen singleton `Rhex::GridAlgorithms::INSTANCE`. Coordinate packing is handled by `Rhex::CoordinatePacker.pack(q, r)`. You can pass a custom `GridAlgorithms` implementation for testing or alternative algorithms.
+The default FOV uses a C line-of-sight loop when the extension is available, with a Ruby fallback. Pathfinding, FOV, and reachability use a `Rhex::GridAlgorithms` instance injected via `grid_algorithms:` on `Grid.new` (which forwards it to `BfsPath` / `DfsPath` / `AstarPath` / `Reachable` / `FieldOfView`). All default to a frozen singleton `Rhex::GridAlgorithms::INSTANCE`. Custom collaborators use the Ruby tracer so their overridden methods are respected. Coordinate packing is handled by `Rhex::CoordinatePacker.pack(q, r)`. You can pass a custom `GridAlgorithms` implementation for testing or alternative algorithms.
 
 ## Benchmarks
 

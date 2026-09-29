@@ -19,6 +19,18 @@ module Rhex
     end
 
     def line_blocked?(source_q, source_r, target_q, target_r, obstacle_set)
+      # Custom collaborators may override hex_distance, which the C tracer cannot call.
+      if equal?(INSTANCE) && defined?(Native)
+        native_result = Native.line_blocked?(source_q, source_r, target_q, target_r, obstacle_set)
+        return native_result unless native_result.nil?
+      end
+
+      line_blocked_ruby?(source_q, source_r, target_q, target_r, obstacle_set)
+    end
+
+    private
+
+    def line_blocked_ruby?(source_q, source_r, target_q, target_r, obstacle_set)
       nudge_q, nudge_r, nudge_s = Constants::LINE_OF_SIGHT_NUDGE
       dist = hex_distance(source_q, source_r, target_q, target_r)
       return false if dist.zero?
@@ -60,6 +72,8 @@ module Rhex
 
       false
     end
+
+    public
 
     def reconstruct_path_from_parents(grid_hash, parents, start_packed_key, end_packed_key)
       path = []

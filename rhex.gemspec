@@ -9,7 +9,8 @@ Gem::Specification.new do |s|
     Misc methods (surrounding hexes, nearest hex, distance between hexes).
   DESCRIPTION
   s.authors     = ["Sergey Kucherov"]
-  s.files       = Dir["lib/**/*.rb", "fonts/**/*", "README.md", "LICENSE"]
+  s.files       = Dir["lib/**/*.rb", "ext/**/*.{c,rb}", "fonts/**/*", "README.md", "LICENSE"]
+  s.extensions  = ["ext/rhex/extconf.rb"]
   s.homepage    = "https://github.com/mersen1/rhex"
   s.license     = "MIT"
   s.required_ruby_version = ">= 3.3.7"

@@ -8,6 +8,8 @@ require "forwardable"
 require "pathname"
 require "rmagick"
 
+require "rhex/native_ext" if Gem.find_files("rhex/native_ext").any?
+
 Zeitwerk::Loader.for_gem.setup
 
 module Rhex

@@ -3,3 +3,14 @@
 
 # SimpleCov
 /coverage
+
+# Native extension build output
+/ext/rhex/Makefile
+/ext/rhex/mkmf.log
+/ext/rhex/*.o
+/ext/rhex/*.so
+/ext/rhex/*.bundle
+/ext/rhex/*.dll
+/lib/rhex/native_ext.so
+/lib/rhex/native_ext.bundle
+/lib/rhex/native_ext.dll

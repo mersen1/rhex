@@ -54,6 +54,13 @@ jobs:
           ruby-version: 3.3.7
           bundler-cache: true
 
+      - name: Build native extension
+        run: |
+          cd ext/rhex
+          ruby extconf.rb
+          make
+          cp native_ext.so ../../lib/rhex/native_ext.so
+
       - name: Run test suite
         run: bundle exec rspec
 

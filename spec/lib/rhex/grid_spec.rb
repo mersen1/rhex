@@ -330,6 +330,18 @@ RSpec.describe(Rhex::Grid) do
       expect(field_of_view).to(contain_exactly(*hex_grid.to_a - [source]))
       expect(field_of_view).not_to(include(source))
     end
+
+    it "uses an injected line-of-sight algorithm" do
+      algorithms = Class.new(Rhex::GridAlgorithms) do
+        def line_blocked?(*_args) = true
+      end.new
+      source = Rhex::AxialHex.new(0, 0)
+      target = Rhex::AxialHex.new(1, 0)
+      hex_grid = described_class.new([source, target], grid_algorithms: algorithms)
+
+      expect(hex_grid.field_of_view(source, obstacles: [target])).to(eq([]))
+      expect(hex_grid.field_of_view(source)).to(eq([]))
+    end
   end
 
   describe "#bfs_path" do

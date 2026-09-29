@@ -16,17 +16,19 @@ module Rhex
       raise Grid::GridDoesNotContainSourceError unless start_hex
 
       obstacle_set = ga.obstacle_packed_key_set(obstacles)
-      # With no obstacles #line_blocked? cannot return true for any hex, so there is no point in
-      # tracing rays (O(cells * distance)).
-      no_obstacles = obstacle_set.empty?
+      # The default tracer cannot block a ray without obstacles. Custom collaborators
+      # may apply other visibility rules, so only skip tracing for the default instance.
+      no_obstacles = ga.equal?(GridAlgorithms::INSTANCE) && obstacle_set.empty?
       source_q = source.q
       source_r = source.r
 
-      grid_hash.each_with_object([]) do |(_key, hex), visible|
+      visible = []
+      grid_hash.each_value do |hex|
         next if hex.equal?(start_hex)
 
         visible << hex if no_obstacles || !ga.line_blocked?(source_q, source_r, hex.q, hex.r, obstacle_set)
       end
+      visible
     end
 
     private
