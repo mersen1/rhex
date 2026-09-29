@@ -18,6 +18,11 @@ module Rhex
       movements_limit = 0 if movements_limit < 0
 
       obstacle_set = ga.obstacle_packed_key_set(obstacles)
+      if ga.equal?(GridAlgorithms::INSTANCE) && defined?(Native)
+        native_result = Native.reachable(grid_hash, obstacle_set, start_hex, start_packed_key, movements_limit)
+        return native_result unless native_result.nil?
+      end
+
       distance_map = { start_packed_key => 0 }
       result = [start_hex]
       queue = [start_hex]

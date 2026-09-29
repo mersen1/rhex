@@ -25,6 +25,18 @@ module Rhex
       return [start_hex] if start_packed_key == target_packed_key
 
       obstacle_set = ga.obstacle_packed_key_set(obstacles)
+      if ga.equal?(GridAlgorithms::INSTANCE) && defined?(Native)
+        native_parents = Native.bfs_parents(
+          grid_hash, obstacle_set, start_hex, start_packed_key,
+          start_q, start_r, target_q, target_r, target_packed_key
+        )
+        unless native_parents.nil?
+          raise Grid::PathNotFoundError if native_parents == false
+
+          return ga.reconstruct_path_from_parents(grid_hash, native_parents, start_packed_key, target_packed_key)
+        end
+      end
+
       visited = { start_packed_key => true }
       parents = {}
       queue = [start_hex]
