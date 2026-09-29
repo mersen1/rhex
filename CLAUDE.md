@@ -26,8 +26,10 @@ bundle exec rubocop       # lint (rubocop-shopify base config)
 ## Architecture
 
 ### Coordinate model
-- `Rhex::CubeHex` is the canonical hex: stores `q`, `r`, `s` plus optional `data` payload and
-  `image_config` (validated by `Contracts::ImageConfigContract`). Equality and `hash` are
+- `Rhex::CubeHex` is the canonical hex: stores `q`, `r`, `s` plus optional `data` payload.
+  Tests prepend `Concerns::ImageConfig` to add validated rendering settings; core hexes do not
+  expose `image_config` by default. The private `hex_options` hook propagates payloads and optional
+  settings into derived hexes and coordinate conversions. Equality and `hash` are
   coordinate-based, so hexes work as set members / hash keys.
 - `Rhex::AxialHex` is a lightweight `(q, r)` form; convert with `to_cube` / `to_axial`.
 - Every hex precomputes a `packed_key`: `(q << 32) | (r & 0xFFFFFFFF)` (see `CoordinatePacker.pack`).

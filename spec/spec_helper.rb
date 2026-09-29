@@ -24,6 +24,8 @@ end
 
 require "rhex"
 
+Rhex::CubeHex.prepend(Rhex::Concerns::ImageConfig)
+
 Dir[Rhex.root.join("spec", "support", "**", "*.rb")].each { |f| require(f) }
 
 RSpec.configure do |config|

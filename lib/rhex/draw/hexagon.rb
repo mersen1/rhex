@@ -54,7 +54,7 @@ module Rhex
       def_delegators :hex, :coordinates
 
       def image_config
-        hex.image_config || default_image_config
+        (hex.image_config if hex.respond_to?(:image_config)) || default_image_config
       end
 
       def draw_hexagon(config)

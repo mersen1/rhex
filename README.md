@@ -48,7 +48,7 @@ grid.to_pic("sample_grid", hex_size: 48, orientation: Rhex::GridToPic::POINTY_TO
 ```
 
 ## Core types
-- `Rhex::CubeHex` – stores `q`, `r`, `s` coordinates plus optional `data` payload and optional `image_config` used for rendering.
+- `Rhex::CubeHex` – stores `q`, `r`, `s` coordinates plus optional `data` payload. Rendering settings are available through the optional `Rhex::Concerns::ImageConfig` module.
 - `Rhex::AxialHex` – lightweight wrapper around `CubeHex` that omits `s`; convert with `to_cube` / `to_axial`.
 - Equality, `eql?`, and `hash` are coordinate based, so hexes with the same coordinates compare equal and work as hash keys.
 - Reflection helpers: `reflection_q`, `reflection_r`, `reflection_s` reflect across the corresponding axes relative to an optional reference point.
@@ -202,9 +202,11 @@ axial.to_cube # => original cube
 ```
 
 ### image_config (attr_accessor) / data (attr_reader)
-Arbitrary payload and rendering options preserved and propagated into derived hexes.
+Arbitrary `data` is preserved and propagated into derived hexes. To add validated rendering options, explicitly prepend the optional module once (as the test suite does in `spec_helper`). This enables `image_config` for both cube and axial hexes, including propagation through arithmetic and coordinate conversions.
 
 ```ruby
+Rhex::CubeHex.prepend(Rhex::Concerns::ImageConfig)
+
 config = {
   hexagon: { color: "#F4F4F1", stroke_color: "#B3B3B3" },
   text:    { color: "#000000", stroke_color: "none", font_size: 32 }
@@ -245,8 +247,10 @@ a == b    # true
 path = grid.bfs_path(source, target)
 grid.to_pic("bfs_path", orientation: :pointy_topped, path: path)
 ```
-- Each hex uses built-in default colors unless you supply an `image_config` hash. Override per hex:
+- Each hex uses built-in default colors. To override them per hex, enable the optional module and supply an `image_config` hash:
 ```ruby
+Rhex::CubeHex.prepend(Rhex::Concerns::ImageConfig)
+
 config = {
   hexagon: { color: "#FFFACD", stroke_color: "#222222" },
   text:    { color: "#333333", stroke_color: "none", font_size: 24 }
@@ -273,6 +277,7 @@ text:
 ```
 Usage:
 ```ruby
+Rhex::CubeHex.prepend(Rhex::Concerns::ImageConfig)
 Rhex::ImageConfigs.load!(Rhex.root.join("config", "images"))
 source = Rhex::AxialHex.new(0, 0, image_config: Rhex::ImageConfigs.image_config_for(:source))
 grid   = [source].to_grid
